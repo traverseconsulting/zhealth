@@ -31,11 +31,35 @@ const SERVICES = {
       { id: 'ecg', label: 'Run ECG', type: 'service.dispatch', desc: 'Heart rhythm tracing' },
     ],
   },
+  labs: {
+    title: 'Lab tests', color: '#a3366b', soft: '#f8e6ef',
+    items: [
+      { id: 'cbc', label: 'Complete blood count', type: 'service.dispatch', desc: 'CBC: red and white cells, platelets' },
+      { id: 'cmp', label: 'Metabolic panel', type: 'service.dispatch', desc: 'Glucose, electrolytes, kidney, liver' },
+      { id: 'lipid', label: 'Cholesterol panel', type: 'service.dispatch', desc: 'Lipids: LDL, HDL, triglycerides' },
+      { id: 'a1c', label: 'HbA1c', type: 'service.dispatch', desc: '3-month blood sugar average' },
+      { id: 'tsh', label: 'Thyroid test', type: 'service.dispatch', desc: 'TSH' },
+      { id: 'ua', label: 'Urinalysis', type: 'service.dispatch', desc: 'Urine test panel' },
+    ],
+  },
   imaging: {
     title: 'Imaging', color: '#2f4f8f', soft: '#e5ebf6',
     items: [
       { id: 'xray', label: 'Take X-ray', type: 'clinical.imaging', desc: 'Radiograph' },
       { id: 'ultrasound', label: 'Do ultrasound', type: 'clinical.imaging', desc: 'Ultrasound scan' },
+    ],
+  },
+  screenings: {
+    title: 'Screenings', color: '#566419', soft: '#eef1dc',
+    items: [
+      { id: 'physical', label: 'Physical exam', type: 'service.dispatch', desc: 'Hands-on exam by a clinician' },
+      { id: 'eye', label: 'Eye exam', type: 'service.dispatch', desc: 'Vision check' },
+      { id: 'hearing', label: 'Hearing test', type: 'service.dispatch', desc: 'Audiometry' },
+      { id: 'depression', label: 'Depression screening', type: 'clinical.observation', desc: 'Questionnaire score' },
+      { id: 'skin', label: 'Skin check', type: 'service.dispatch', desc: 'Skin and mole exam' },
+      { id: 'mammogram', label: 'Mammogram', type: 'clinical.imaging', desc: 'Breast screening X-ray' },
+      { id: 'colorectal', label: 'Colorectal screening', type: 'service.dispatch', desc: 'FIT test or colonoscopy' },
+      { id: 'pap', label: 'Pap test', type: 'service.dispatch', desc: 'Cervical screening' },
     ],
   },
   treatment: {
