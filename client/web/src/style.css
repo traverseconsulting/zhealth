@@ -137,3 +137,35 @@ h2 { font-size: var(--text-lg); }
   .flow { grid-template-columns: 1fr; }
   .flow-arrow { transform: rotate(90deg); justify-self: center; }
 }
+
+/* Recipient page */
+:root { --clinical: #6b3fa0; --clinical-soft: #efe8f7; --healthcare: #1f6f43; --healthcare-soft: #e3f2e9; }
+.recipient { display: grid; gap: var(--space-8); }
+.recip-head { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+.recip-head h1 { font-size: var(--text-xl); letter-spacing: -.01em; color: var(--recipient); }
+.btn-back { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 999px; color: var(--ink-2); font-size: var(--text-sm); }
+.btn-back:hover { border-color: var(--ink-3); color: var(--ink); }
+.svc-group { display: grid; gap: var(--space-3); }
+.svc-h { font-size: var(--text-base); font-weight: 600; display: flex; align-items: center; gap: var(--space-2); }
+.svc-h::before { content: ''; width: 10px; height: 10px; border-radius: 3px; background: var(--clinical); }
+.svc-group[data-group="healthcare"] .svc-h::before { background: var(--healthcare); }
+.svc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr)); gap: var(--space-3); }
+.btn-svc { display: grid; gap: 2px; align-content: start; text-align: left; padding: var(--space-4); background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius); color: var(--ink); transition: border-color .15s, transform .15s, box-shadow .15s; }
+.btn-svc:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--clinical); }
+.btn-svc[data-group="healthcare"]:hover { border-color: var(--healthcare); }
+.btn-svc:disabled { opacity: .6; cursor: progress; }
+.svc-name { font-weight: 600; font-size: var(--text-sm); color: var(--clinical); }
+.btn-svc[data-group="healthcare"] .svc-name { color: var(--healthcare); }
+.svc-desc { font-size: var(--text-xs); color: var(--ink-3); }
+.svc-type { margin-top: var(--space-2); color: var(--ink-3); font-size: 0.6875rem; }
+.pill-clinical { background: var(--clinical-soft); color: var(--clinical); }
+.pill-healthcare { background: var(--healthcare-soft); color: var(--healthcare); }
+.pill-type { background: var(--surface-2); color: var(--ink-2); font-weight: 500; }
+@media (max-width: 480px) {
+  .svc-grid { grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .btn-svc { padding: var(--space-3); }
+}
+.chain-role { text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 8.5rem; }
+.chain-list li > .mono { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
