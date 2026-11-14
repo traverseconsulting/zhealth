@@ -16,18 +16,21 @@ export function keyInfo(privHex) {
   return { priv, pubHex: pub.toString(), address: pub.toAddress(), wif: priv.toWif() };
 }
 
-function opReturn(text) {
+// extra: additional pushes after the text, as hex strings (service ID,
+// device public key, device signature).
+function opReturn(text, extra = []) {
   const s = new Script();
   s.writeOpCode(OP.OP_FALSE);
   s.writeOpCode(OP.OP_RETURN);
   s.writeBin(Utils.toArray(text, 'utf8'));
+  for (const h of extra) s.writeBin(Utils.toArray(h, 'hex'));
   return s;
 }
 
 // payTo: optional BSV address that receives a 1-sat P2PKH output (used to
 // close a contract to the patient's ECDH-derived stealth address).
 export const CLOSE_SATS = 1;
-export async function buildTx(text, privHex, payTo = null) {
+export async function buildTx(text, privHex, payTo = null, extra = []) {
   const { priv, pubHex, address } = keyInfo(privHex);
 
   // Placeholder source transaction paying 1 sat to this key's address.
@@ -37,7 +40,7 @@ export async function buildTx(text, privHex, payTo = null) {
 
   const tx = new Transaction();
   tx.addInput({ sourceTransaction: source, sourceOutputIndex: 0, unlockingScriptTemplate: new P2PKH().unlock(priv) });
-  tx.addOutput({ lockingScript: opReturn(text), satoshis: 0 });
+  tx.addOutput({ lockingScript: opReturn(text, extra), satoshis: 0 });
   if (payTo) tx.addOutput({ lockingScript: new P2PKH().lock(payTo), satoshis: CLOSE_SATS });
   await tx.sign();
 
@@ -52,7 +55,7 @@ export async function buildTx(text, privHex, payTo = null) {
 
   const raw = tx.toHex();
   return {
-    text, address,
+    text, address, extra, pubHex,
     txid: tx.id('hex'),
     rawHex: raw,
     size: raw.length / 2,

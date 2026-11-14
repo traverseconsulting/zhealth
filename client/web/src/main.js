@@ -1,6 +1,7 @@
 import './style.css';
 import { newSession, ACCOUNT_PATH } from './chain.js';
 import { buildTx, keyInfo, PLACEHOLDER_SATS, CLOSE_SATS } from './tx.js';
+import { serviceId, createRegistry, devicesFor, signReading, validateReading, unregisteredDevice } from './devices.js';
 import { matchCode, closeAddressForPatient, closeKeyForPatient, randomPeerKey } from './ecdh.js';
 
 const app = document.getElementById('app');
@@ -76,6 +77,10 @@ const SERVICES = {
     ],
   },
 };
+// Public service identifier per microservice (devices.js).
+for (const g of Object.values(SERVICES)) for (const it of g.items) it.sid = serviceId(it.id);
+let registry = null;  // trusted-device registry (simulated network state)
+
 const findService = (id) => {
   for (const [group, g] of Object.entries(SERVICES)) {
     const it = g.items.find((x) => x.id === id);
@@ -108,7 +113,7 @@ function deriveKey() {
 async function addEvent(role, text, extra = {}, opts = {}) {
   const key = opts.key || deriveKey();
   keys.push(key);
-  const t = { role, key, ...extra, tpl: await buildTx(text, key.privHex, opts.payTo || null) };
+  const t = { role, key, ...extra, tpl: await buildTx(text, key.privHex, opts.payTo || null, opts.extra || []) };
   txs.push(t);
   return t;
 }
@@ -129,6 +134,7 @@ function renderWelcome() {
   document.getElementById('welcome').addEventListener('click', async () => {
     session = newSession();
     keys = []; txs = []; contracts = []; visit = null;
+    registry = await createRegistry();
     await addEvent('welcome', WELCOME_TEXT);
     view = 'roles';
     renderSession();
@@ -184,7 +190,9 @@ function txCard(t, n) {
         <span class="flow-h">Output · 0 sat</span>
         <dl class="tx-fields">
           <div><dt>OP_RETURN text</dt><dd class="tx-text">“${esc(x.text)}”</dd></div>
-          <div><dt>Script</dt><dd class="mono wrap">OP_FALSE OP_RETURN "${esc(x.text)}"</dd></div>
+          <div><dt>Script</dt><dd class="mono wrap">OP_FALSE OP_RETURN "${esc(x.text)}"${(x.extra || []).map((h) => ` ${h.length > 20 ? short(h, 8, 6) : h}`).join('')}</dd></div>
+          ${t.sid ? `<div><dt>Service ID (public)</dt><dd class="mono">${t.sid}</dd></div>` : ''}
+          ${t.device ? `<div><dt>Measured by trusted device</dt><dd>${esc(t.device.model)} ${t.device.serial} · <span class="mono">${short(t.device.key.pubHex, 8, 6)}</span></dd></div>` : ''}
           ${x.payTo ? `<div><dt>Output 1 · ${CLOSE_SATS} sat to patient's ECDH close address</dt><dd class="mono wrap">${x.payTo}</dd></div>` : ''}
         </dl>
       </div>
@@ -286,14 +294,34 @@ function visitPanel() {
          </tbody></table>
          <p class="note">${v.scan.filter((r) => r.match).length === 1 ? `Exactly one match: contract #${v.matchedId}.` : 'No unique match.'} ${v.scan.filter((r) => r.label === contractById(v.ownId).svc.label).length} open "${esc(contractById(v.ownId).svc.label)}" contracts were searched.</p>`
       : `<button type="button" class="btn-submit" id="v-scan">Scan ${contracts.filter((x) => x.status === 'open').length} open contracts</button>`, !!v.scan);
-  const s4 = !c ? '' : step(4, 'Doctor', 'Post the result and close the contract',
+  const devs = c ? devicesFor(registry, c.svc.id) : [];
+  const checks = (r) => `
+         <ul class="checks">
+           <li class="${r.registered ? 'ok' : 'bad'}">${r.registered ? 'Pass' : 'Fail'} · device key is in the network registry</li>
+           <li class="${r.allowed ? 'ok' : 'bad'}">${r.allowed ? 'Pass' : 'Fail'} · device is registered for service ${c.svc.sid}</li>
+           <li class="${r.sigOk ? 'ok' : 'bad'}">${r.sigOk ? 'Pass' : 'Fail'} · device signature covers this value, D and A'</li>
+         </ul>`;
+  const s4 = !c ? '' : step(4, 'Doctor', devs.length ? 'Take the reading with a trusted device' : 'Post the result and close the contract',
     v.resultTx
       ? `<p>Result posted, signed by the doctor's visit key. Output 1 pays ${CLOSE_SATS} sat to the patient's close address <span class="mono">A'</span>, derived from <span class="mono">A</span> and the shared secret (BRC-42).</p>
          <dl class="kv"><div><dt>OP_RETURN</dt><dd>“${esc(v.resultTx.tpl.text)}”</dd></div>
-         <div><dt>Close address A'</dt><dd class="mono wrap">${v.resultTx.tpl.payTo}</dd></div></dl>`
-      : `<div class="row"><label for="v-result">${esc(c.svc.label)} result</label>
-         <input id="v-result" type="text" value="${esc(resultDefault(c.svc.label))}" maxlength="40" />
-         <button type="button" class="btn-submit" id="v-post">Post result and close contract</button></div>`, !!v.resultTx);
+         <div><dt>Service ID</dt><dd class="mono">${c.svc.sid}</dd></div>
+         ${v.reading ? `<div><dt>Measured by</dt><dd>${esc(v.reading.device.model)} ${v.reading.device.serial} · public key <span class="mono">${short(v.reading.device.key.pubHex, 8, 6)}</span></dd></div>
+         <div><dt>Device signature</dt><dd class="mono wrap">${short(v.reading.sig, 16, 12)}</dd></div>` : ''}
+         <div><dt>Close address A'</dt><dd class="mono wrap">${v.resultTx.tpl.payTo}</dd></div></dl>
+         ${v.reading ? `<h3 class="checks-h">Network check before accepting the result ${v.check.ok ? '<span class="pill pill-ok">Accepted</span>' : '<span class="pill pill-bad">Rejected</span>'}</h3>${checks(v.check)}
+         ${v.forged ? `<h3 class="checks-h">Same reading from an unregistered thermometer <span class="pill pill-bad">${v.forged.ok ? 'Accepted' : 'Rejected'}</span></h3>${checks(v.forged)}`
+           : `<button type="button" class="btn-ghost" id="v-forge">Try the same reading from an unregistered device</button>`}`
+         : '<p class="note">No trusted device is registered for this service yet, so the result was entered by hand and has no device signature.</p>'}`
+      : devs.length
+        ? `<p>The ${esc(devs[0].model.toLowerCase())} measures the patient and signs the reading with its own registered key. Nobody types the value.</p>
+           <div class="row"><label class="sr-only" for="v-device">Device</label>
+           <select id="v-device">${devs.map((d, i) => `<option value="${i}">${esc(d.model)} ${d.serial}</option>`).join('')}</select>
+           <button type="button" class="btn-submit" id="v-post">Take reading and close contract</button></div>`
+        : `<div class="row"><label for="v-result">${esc(c.svc.label)} result</label>
+           <input id="v-result" type="text" value="${esc(resultDefault(c.svc.label))}" maxlength="40" />
+           <button type="button" class="btn-submit" id="v-post">Post result and close contract</button></div>
+           <p class="note">No trusted device is registered for this service, so the result is entered by hand.</p>`, !!v.resultTx);
   const s5 = !v.resultTx ? '' : step(5, 'Patient', 'Confirm the result is theirs',
     `<p>Patient derives the close key <span class="mono">a'</span> from their key <span class="mono">a</span> and <span class="mono">D</span>, and checks it controls output 1.</p>
      <dl class="kv"><div><dt>Patient-derived address</dt><dd class="mono wrap">${v.patientClose.address}</dd></div></dl>
@@ -316,6 +344,26 @@ function visitPanel() {
       </section>`;
 }
 
+function devicesPanel() {
+  if (!registry) return '';
+  return `
+      <details class="devices">
+        <summary><span class="devices-h">Trusted devices</span><span class="count">${registry.devices.length} registered</span></summary>
+        <p class="visit-lede">Each device has its own key pair. The network registrar <span class="mono">${short(registry.registrar.address, 8, 6)}</span> published one registration transaction per device, binding its public key to the public service IDs it may measure.</p>
+        <ul class="device-list">
+          ${registry.devices.map((d) => `
+          <li class="device">
+            <div class="device-top"><strong>${esc(d.model)}</strong><span class="mono muted">${d.serial}</span>${d.reg.verified ? '<span class="pill pill-ok">Registered</span>' : ''}</div>
+            <dl class="kv">
+              <div><dt>Device public key</dt><dd class="mono wrap">${d.key.pubHex}</dd></div>
+              <div><dt>Services</dt><dd>${d.services.map((sl, i) => `${esc(findService(sl).label)} <span class="mono svc-id">${d.svcIds[i]}</span>`).join(' · ')}</dd></div>
+              <div><dt>Registration tx</dt><dd class="mono wrap">${d.reg.txid}</dd></div>
+            </dl>
+          </li>`).join('')}
+        </ul>
+      </details>`;
+}
+
 function contractsPanel() {
   const open = contracts.filter((c) => c.status === 'open');
   const done = contracts.filter((c) => c.status === 'fulfilled');
@@ -329,6 +377,7 @@ function contractsPanel() {
               <span class="contract-id">#${c.id}</span>
               <span class="contract-name">${esc(c.svc.label)}</span>
               <span class="pill pill-type mono">${c.svc.type}</span>
+              <span class="svc-id mono" title="Public service ID">${c.svc.sid}</span>
             </div>
             <div class="contract-meta">
               <span>${c.peer ? 'Requested by another peer' : `Requested in Tx ${c.reqN} · K${c.req.key.index} (you)`}</span>
@@ -363,6 +412,7 @@ function providerPanel() {
   return `
     <section class="provider" aria-labelledby="prov-h">
       <div class="recip-head">${backBtn}<h1 id="prov-h" class="prov-title">Provider</h1></div>
+      ${devicesPanel()}
       ${visitPanel()}
       ${contractsPanel()}
       <div class="grid">
@@ -400,6 +450,7 @@ function recipientPanel() {
           <button type="button" class="btn-svc" data-svc="${it.id}" data-group="${gid}">
             <span class="svc-name">${it.label}</span>
             <span class="svc-desc">${it.desc}</span>
+            <span class="svc-id mono" title="Public service ID">${it.sid}</span>
           </button>`).join('')}
         </div>
       </div>`;
@@ -435,7 +486,7 @@ function renderSession() {
       const svc = findService(b.dataset.svc);
       app.querySelectorAll('.btn-svc').forEach((x) => (x.disabled = true));
       const id = contracts.length + 1;
-      const req = await addEvent('service', svc.label, { label: svc.label, type: svc.type, group: svc.group, contractId: id });
+      const req = await addEvent('service', svc.label, { label: svc.label, type: svc.type, group: svc.group, contractId: id, sid: svc.sid }, { extra: [svc.sid] });
       contracts.push({ id, svc, req, reqN: txs.length, status: 'open', reward: REWARD_SATS });
       renderSession();
       app.querySelector('.tx')?.classList.add('tx-new');
@@ -461,14 +512,33 @@ function renderSession() {
   on('v-post', async (e) => {
     e.target.disabled = true;
     const c = contractById(visit.matchedId);
-    const value = (document.getElementById('v-result').value || '').trim() || resultDefault(c.svc.label);
-    const text = `${c.svc.label}: ${value}`;
     const payTo = closeAddressForPatient(visit.D.privHex, c.req.key.pubHex, c.req.tpl.txid);   // doctor: A' from (d, A)
-    c.ful = await addEvent('fulfil', text, { label: text, type: c.svc.type, contractId: c.id }, { key: visit.D, payTo });
+    const devs = devicesFor(registry, c.svc.id);
+    let value, extra = [c.svc.sid], device = null;
+    if (devs.length) {
+      device = devs[Number(document.getElementById('v-device').value) || 0];
+      value = device.read(c.svc.id);                                                       // device measures
+      const sig = signReading(device, c.svc.sid, value, visit.D.pubHex, payTo);            // device signs
+      extra = [c.svc.sid, device.key.pubHex, sig];
+      visit.reading = { device, value, sig };
+      visit.check = validateReading(registry, { svc: c.svc.sid, value, devicePub: device.key.pubHex, sig, D: visit.D.pubHex, closeAddr: payTo });
+    } else {
+      value = (document.getElementById('v-result').value || '').trim() || resultDefault(c.svc.label);
+    }
+    const text = `${c.svc.label}: ${value}`;
+    c.ful = await addEvent('fulfil', text, { label: text, type: c.svc.type, contractId: c.id, sid: c.svc.sid, device }, { key: visit.D, payTo, extra });
     c.fulN = txs.length;
     c.status = 'fulfilled';
     visit.resultTx = c.ful;
     visit.patientClose = closeKeyForPatient(c.req.key.privHex, visit.D.pubHex, c.req.tpl.txid); // patient: a' from (a, D)
+    renderSession();
+  });
+  on('v-forge', () => {
+    const c = contractById(visit.matchedId);
+    const fake = unregisteredDevice();
+    const r = visit.reading, payTo = visit.resultTx.tpl.payTo;
+    const sig = signReading(fake, c.svc.sid, r.value, visit.D.pubHex, payTo);
+    visit.forged = validateReading(registry, { svc: c.svc.sid, value: r.value, devicePub: fake.key.pubHex, sig, D: visit.D.pubHex, closeAddr: payTo });
     renderSession();
   });
   on('add-peers', async (e) => {
@@ -477,7 +547,7 @@ function renderSession() {
     for (const id of picks) {
       const svc = findService(id);
       const k = randomPeerKey();
-      const req = { role: 'peer', key: { ...k, index: null }, tpl: await buildTx(svc.label, k.privHex) };
+      const req = { role: 'peer', key: { ...k, index: null }, tpl: await buildTx(svc.label, k.privHex, null, [svc.sid]) };
       contracts.push({ id: contracts.length + 1, svc, req, peer: true, status: 'open', reward: REWARD_SATS });
     }
     peerSeq += picks.length;

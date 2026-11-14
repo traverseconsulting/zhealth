@@ -244,3 +244,24 @@ h2 { font-size: var(--text-lg); }
 .btn-ghost:disabled { opacity: .5; }
 .pill-bad { background: #fbe4e4; color: #9b1c1c; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ---------- Service IDs and trusted devices ---------- */
+.svc-id { font-size: 0.6875rem; color: var(--ink-3); letter-spacing: .02em; }
+.btn-svc .svc-id { display: block; margin-top: 2px; }
+.devices { padding: var(--space-4) var(--space-5); background: var(--surface); border: 1px solid var(--border, #e3e0d8); border-radius: var(--radius); }
+.devices summary { display: flex; align-items: center; gap: var(--space-3); cursor: pointer; list-style: none; }
+.devices summary::-webkit-details-marker { display: none; }
+.devices summary::after { content: '+'; margin-left: auto; color: var(--ink-3); font-weight: 600; }
+.devices[open] summary::after { content: '−'; }
+.devices-h { font-size: var(--text-lg, 1.125rem); font-weight: 600; }
+.devices[open] > .visit-lede { margin: var(--space-3) 0; }
+.device-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.device { border: 1px solid var(--border, #e3e0d8); border-radius: var(--radius); padding: var(--space-3) var(--space-4); display: grid; gap: var(--space-2); min-width: 0; font-size: var(--text-sm); }
+.device-top { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.checks-h { margin: var(--space-2) 0 0; font-size: var(--text-sm); display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); font-size: var(--text-sm); }
+.checks li { padding-left: 1.2rem; position: relative; }
+.checks li::before { content: ''; position: absolute; left: 0; top: .45em; width: .55rem; height: .55rem; border-radius: 999px; }
+.checks li.ok::before { background: var(--accent); }
+.checks li.bad::before { background: #b42318; }
+.checks li.bad { color: #9b1c1c; }
