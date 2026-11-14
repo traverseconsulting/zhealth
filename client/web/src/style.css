@@ -180,3 +180,7 @@ h2 { font-size: var(--text-lg); }
 .btn-link:hover { text-decoration: underline; }
 .roles { gap: var(--space-5); }
 .recip-head h1.prov-title { color: var(--provider); }
+/* Service groups use per-group color vars */
+.svc-h::before, .svc-group[data-group] .svc-h::before { background: var(--g); }
+.svc-group .btn-svc:hover { border-color: var(--g); }
+.svc-group .btn-svc .svc-name { color: var(--g); }

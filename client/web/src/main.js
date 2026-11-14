@@ -5,32 +5,46 @@ import { buildTx, keyInfo, PLACEHOLDER_SATS } from './tx.js';
 const app = document.getElementById('app');
 const WELCOME_TEXT = 'Welcome to the Zhealth';
 
-// Recipient-side event microservices. Types follow spec 5.2; healthcare
-// services follow whitepaper Sections 2 and 10.
+// Recipient page: direct patient care services. Each one is an event
+// microservice; its spec 5.2 event type is recorded on the transaction card.
 const SERVICES = {
-  clinical: {
-    title: 'Clinical services',
+  vitals: {
+    title: 'Vital signs', color: '#0f5f5a', soft: '#e2efec',
     items: [
-      { id: 'observation', label: 'Observation', type: 'clinical.observation', desc: 'Vital sign or lab value' },
-      { id: 'allergy', label: 'Allergy', type: 'clinical.allergy', desc: 'Allergy or intolerance' },
-      { id: 'immunization', label: 'Immunization', type: 'clinical.immunization', desc: 'Vaccine record' },
-      { id: 'medication', label: 'Medication', type: 'clinical.medication', desc: 'Medication order' },
-      { id: 'diagnosis', label: 'Diagnosis', type: 'clinical.diagnosis', desc: 'Diagnostic code' },
-      { id: 'imaging', label: 'Imaging findings', type: 'clinical.imaging', desc: 'Imaging report' },
-      { id: 'careplan', label: 'Care plan', type: 'clinical.careplan', desc: 'Care-plan update' },
+      { id: 'temperature', label: 'Take temperature', type: 'clinical.observation', desc: 'Body temperature' },
+      { id: 'vitals', label: 'Take vitals', type: 'clinical.observation', desc: 'Full vital-sign set' },
+      { id: 'bp', label: 'Take blood pressure', type: 'clinical.observation', desc: 'Systolic and diastolic' },
+      { id: 'pulse', label: 'Check pulse', type: 'clinical.observation', desc: 'Heart rate' },
+      { id: 'spo2', label: 'Check oxygen level', type: 'clinical.observation', desc: 'Pulse oximetry (SpO2)' },
+      { id: 'resp', label: 'Count breathing rate', type: 'clinical.observation', desc: 'Respiratory rate' },
+      { id: 'weight', label: 'Measure weight', type: 'clinical.observation', desc: 'Body weight' },
+      { id: 'pain', label: 'Assess pain', type: 'clinical.observation', desc: 'Pain score 0–10' },
     ],
   },
-  healthcare: {
-    title: 'Healthcare services',
+  tests: {
+    title: 'Tests and samples', color: '#6b3fa0', soft: '#efe8f7',
     items: [
-      { id: 'appointment', label: 'Schedule appointment', type: 'appointment.schedule', desc: 'Book a visit' },
-      { id: 'demographics', label: 'Update demographics', type: 'demographics.update', desc: 'Profile attribute' },
-      { id: 'view', label: 'View record', type: 'record.view', desc: 'Read a past event' },
-      { id: 'labtest', label: 'Lab test', type: 'service.dispatch', desc: 'Order a lab test' },
-      { id: 'imagingstudy', label: 'Imaging study', type: 'service.dispatch', desc: 'Order an imaging study' },
-      { id: 'temperature', label: 'Temperature reading', type: 'service.dispatch', desc: 'Device reading' },
-      { id: 'dispense', label: 'Medication dispensing', type: 'service.dispatch', desc: 'Dispense a medication' },
-      { id: 'monitoring', label: 'Remote monitoring', type: 'service.dispatch', desc: 'Ongoing monitoring' },
+      { id: 'glucose', label: 'Check blood sugar', type: 'clinical.observation', desc: 'Finger-stick glucose' },
+      { id: 'blood', label: 'Draw blood', type: 'service.dispatch', desc: 'Blood sample for the lab' },
+      { id: 'urine', label: 'Collect urine sample', type: 'service.dispatch', desc: 'Urinalysis' },
+      { id: 'swab', label: 'Take a swab', type: 'service.dispatch', desc: 'Throat or nasal swab' },
+      { id: 'ecg', label: 'Run ECG', type: 'service.dispatch', desc: 'Heart rhythm tracing' },
+    ],
+  },
+  imaging: {
+    title: 'Imaging', color: '#2f4f8f', soft: '#e5ebf6',
+    items: [
+      { id: 'xray', label: 'Take X-ray', type: 'clinical.imaging', desc: 'Radiograph' },
+      { id: 'ultrasound', label: 'Do ultrasound', type: 'clinical.imaging', desc: 'Ultrasound scan' },
+    ],
+  },
+  treatment: {
+    title: 'Treatment', color: '#8a4b16', soft: '#f6eadf',
+    items: [
+      { id: 'medication', label: 'Give medication', type: 'clinical.medication', desc: 'Administer a dose' },
+      { id: 'vaccine', label: 'Give vaccine', type: 'clinical.immunization', desc: 'Immunization' },
+      { id: 'wound', label: 'Dress wound', type: 'service.dispatch', desc: 'Clean and bandage' },
+      { id: 'iv', label: 'Start IV', type: 'service.dispatch', desc: 'Intravenous line' },
     ],
   },
 };
@@ -108,7 +122,7 @@ function txCard(t, n) {
     <header class="tx-head">
       <div class="tx-title">
         <span class="tx-num">Tx ${n + 1}</span>
-        <span class="pill pill-${t.role}">${esc(label)}</span>
+        <span class="pill pill-${t.role}"${t.group ? ` style="background:${SERVICES[t.group].soft};color:${SERVICES[t.group].color}"` : ''}>${esc(label)}</span>
         ${t.type ? `<span class="pill pill-type mono">${t.type}</span>` : ''}
         <span class="pill ${x.verified ? 'pill-ok' : 'pill-bad'}">${x.verified ? 'Signature valid' : 'Signature invalid'}</span>
       </div>
@@ -216,14 +230,13 @@ function providerPanel() {
 
 function recipientPanel() {
   const group = (gid) => `
-      <div class="svc-group" data-group="${gid}">
+      <div class="svc-group" data-group="${gid}" style="--g:${SERVICES[gid].color};--g-soft:${SERVICES[gid].soft}">
         <h2 class="svc-h">${SERVICES[gid].title}</h2>
         <div class="svc-grid">
           ${SERVICES[gid].items.map((it) => `
           <button type="button" class="btn-svc" data-svc="${it.id}" data-group="${gid}">
             <span class="svc-name">${it.label}</span>
             <span class="svc-desc">${it.desc}</span>
-            <span class="svc-type mono">${it.type}</span>
           </button>`).join('')}
         </div>
       </div>`;
@@ -231,8 +244,7 @@ function recipientPanel() {
     <section class="recipient" aria-labelledby="recip-h">
       <div class="recip-head">${backBtn}<h1 id="recip-h">Recipient</h1></div>
       ${lastSigned()}
-      ${group('clinical')}
-      ${group('healthcare')}
+      ${Object.keys(SERVICES).map(group).join('')}
     </section>`;
 }
 
@@ -259,7 +271,7 @@ function renderSession() {
     b.addEventListener('click', async () => {
       const svc = findService(b.dataset.svc);
       app.querySelectorAll('.btn-svc').forEach((x) => (x.disabled = true));
-      await addEvent(svc.group, svc.label, { label: svc.label, type: svc.type });
+      await addEvent('service', svc.label, { label: svc.label, type: svc.type, group: svc.group });
       renderSession();
       app.querySelector('.tx')?.classList.add('tx-new');
     }));
