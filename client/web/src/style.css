@@ -125,3 +125,15 @@ h2 { font-size: var(--text-lg); }
   .pushes li { grid-template-columns: 1fr; gap: 0; }
   .keychip > .mono { max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+.pill-ok { background: var(--accent-soft); color: var(--accent); }
+.pill-bad { background: var(--danger-soft); color: var(--danger); }
+.tx-title { flex-wrap: wrap; }
+.flow { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--space-3); align-items: stretch; }
+.flow-box { background: var(--surface-2); border-radius: var(--radius); padding: var(--space-3) var(--space-4); display: grid; gap: var(--space-3); align-content: start; }
+.flow-h { font-size: var(--text-xs); font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: .06em; }
+.flow-arrow { align-self: center; color: var(--ink-3); font-size: var(--text-lg); }
+.btn-role:disabled { opacity: .6; cursor: progress; }
+@media (max-width: 640px) {
+  .flow { grid-template-columns: 1fr; }
+  .flow-arrow { transform: rotate(90deg); justify-self: center; }
+}

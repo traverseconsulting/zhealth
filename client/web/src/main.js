@@ -1,6 +1,6 @@
 import './style.css';
 import { newSession, ACCOUNT_PATH } from './chain.js';
-import { buildTemplate } from './tx.js';
+import { buildTx, keyInfo, PLACEHOLDER_SATS } from './tx.js';
 
 const app = document.getElementById('app');
 const WELCOME_TEXT = 'Welcome to the Zhealth';
@@ -12,10 +12,14 @@ let txs = [];         // { role, key, tpl }
 const short = (h, a = 10, b = 8) => `${h.slice(0, a)}…${h.slice(-b)}`;
 const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-function addEvent(role, text) {
+async function addEvent(role, text) {
   const key = session.nextKey();
+  const info = keyInfo(key.privHex);
+  if (info.pubHex !== key.pubHex) throw new Error('key mismatch between HD derivation and BSV SDK');
+  key.address = info.address;
+  key.wif = info.wif;
   keys.push(key);
-  txs.push({ role, key, tpl: buildTemplate(text, key) });
+  txs.push({ role, key, tpl: await buildTx(text, key.privHex) });
 }
 
 /* ---------- Page 1: Welcome ---------- */
@@ -31,10 +35,10 @@ function renderWelcome() {
       <p class="welcome-note">Clicking generates a random 256-bit key in this browser. Every action after that gets its own key, derived from that root.</p>
     </div>
   </main>`;
-  document.getElementById('welcome').addEventListener('click', () => {
+  document.getElementById('welcome').addEventListener('click', async () => {
     session = newSession();
     keys = []; txs = [];
-    addEvent('welcome', WELCOME_TEXT);
+    await addEvent('welcome', WELCOME_TEXT);
     renderSession();
   });
 }
@@ -43,42 +47,65 @@ function renderWelcome() {
 function keyChip() {
   const k = keys[keys.length - 1];
   return `
-  <div class="keychip" tabindex="0" aria-describedby="keypop" aria-label="Latest public key K${k.index}. Hover or focus to reveal the private key.">
+  <div class="keychip" tabindex="0" aria-describedby="keypop" aria-label="Latest BSV address for K${k.index}. Hover or focus to reveal the private key.">
     <span class="keychip-tag">K${k.index}</span>
-    <span class="mono">${short(k.pubHex, 8, 6)}</span>
+    <span class="mono">${k.address}</span>
     <div class="keypop" id="keypop" role="tooltip">
+      <div class="kp-row"><span class="kp-label">BSV address (P2PKH)</span><span class="mono wrap">${k.address}</span></div>
       <div class="kp-row"><span class="kp-label">Path</span><span class="mono">${k.path}</span></div>
       <div class="kp-row"><span class="kp-label">Public key (33 bytes)</span><span class="mono wrap">${k.pubHex}</span></div>
-      <div class="kp-row danger"><span class="kp-label">Private key (256-bit)</span><span class="mono wrap">${k.privHex}</span></div>
+      <div class="kp-row danger"><span class="kp-label">Private key (256-bit hex)</span><span class="mono wrap">${k.privHex}</span></div>
+      <div class="kp-row danger"><span class="kp-label">Private key (WIF)</span><span class="mono wrap">${k.wif}</span></div>
     </div>
   </div>`;
 }
 
 function txCard(t, n) {
   const label = { welcome: 'Welcome', provider: 'Provider', recipient: 'Recipient' }[t.role];
+  const x = t.tpl;
   return `
   <article class="tx" data-role="${t.role}">
     <header class="tx-head">
       <div class="tx-title">
         <span class="tx-num">Tx ${n + 1}</span>
         <span class="pill pill-${t.role}">${label}</span>
+        <span class="pill ${x.verified ? 'pill-ok' : 'pill-bad'}">${x.verified ? 'Signature valid' : 'Signature invalid'}</span>
       </div>
       <span class="tx-meta mono">K${t.key.index} · ${t.key.path}</span>
     </header>
-    <dl class="tx-fields">
-      <div><dt>OP_RETURN text</dt><dd class="tx-text">“${esc(t.tpl.text)}”</dd></div>
-      <div><dt>Public key</dt><dd class="mono wrap">${t.key.pubHex}</dd></div>
-      <div><dt>Template txid</dt><dd class="mono wrap">${t.tpl.txid}</dd></div>
-    </dl>
+
+    <div class="flow">
+      <div class="flow-box">
+        <span class="flow-h">Input · signed by K${t.key.index}</span>
+        <dl class="tx-fields">
+          <div><dt>From BSV address</dt><dd class="mono wrap">${x.address}</dd></div>
+          <div><dt>Public key (in unlocking script)</dt><dd class="mono wrap">${x.unlockPub}</dd></div>
+          <div><dt>Signature</dt><dd class="mono wrap">${x.sigHex}</dd></div>
+        </dl>
+      </div>
+      <div class="flow-arrow" aria-hidden="true">→</div>
+      <div class="flow-box">
+        <span class="flow-h">Output · 0 sat</span>
+        <dl class="tx-fields">
+          <div><dt>OP_RETURN text</dt><dd class="tx-text">“${esc(x.text)}”</dd></div>
+          <div><dt>Script</dt><dd class="mono wrap">OP_FALSE OP_RETURN "zhealth" "${esc(x.text)}"</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <dl class="tx-fields"><div><dt>Transaction ID</dt><dd class="mono wrap">${x.txid}</dd></div></dl>
+
     <details class="tx-details">
-      <summary>Output script and raw hex <span class="muted">(${t.tpl.size} bytes · signature ${t.tpl.verified ? 'verified' : 'invalid'})</span></summary>
+      <summary>Scripts and raw hex <span class="muted">(${x.size} bytes)</span></summary>
       <ol class="pushes">
-        <li><span class="op">OP_FALSE OP_RETURN</span></li>
-        ${t.tpl.pushes.map((p) => `<li><span class="push-label">${p.label}</span><span class="mono wrap">${esc(p.value)}</span></li>`).join('')}
+        <li><span class="push-label">Spends</span><span class="mono wrap">${x.sourceTxid}:0 (placeholder, ${PLACEHOLDER_SATS} sat)</span></li>
+        <li><span class="push-label">Locking</span><span class="mono wrap">${x.lockingAsm}</span></li>
+        <li><span class="push-label">Unlocking</span><span class="mono wrap">&lt;sig&gt; ${x.unlockPub}</span></li>
+        <li><span class="push-label">OP_RETURN</span><span class="mono wrap">${x.opReturnAsm}</span></li>
       </ol>
       <div class="raw">
-        <div class="raw-head"><span>Raw transaction (unsigned, unfunded)</span><button type="button" class="btn-copy" data-copy="${t.tpl.rawHex}">Copy hex</button></div>
-        <code class="mono wrap">${t.tpl.rawHex}</code>
+        <div class="raw-head"><span>Raw signed transaction</span><button type="button" class="btn-copy" data-copy="${x.rawHex}">Copy hex</button></div>
+        <code class="mono wrap">${x.rawHex}</code>
       </div>
     </details>
   </article>`;
@@ -93,7 +120,7 @@ function renderSession() {
   <main class="session">
     <section class="roles" aria-labelledby="roles-h">
       <h1 id="roles-h">Who are you in this interaction?</h1>
-      <p class="lede">Each choice derives a new key from your root and builds its own transaction.</p>
+      <p class="lede">Each choice derives a new key from your root, and that key signs its own BSV transaction.</p>
       <div class="role-buttons">
         <button type="button" class="btn-role" data-role="provider">
           <span class="role-name">Provider</span><span class="role-desc">Clinician, lab, device</span>
@@ -107,7 +134,7 @@ function renderSession() {
     <div class="grid">
       <section class="txlist" aria-labelledby="tx-h">
         <div class="section-head">
-          <h2 id="tx-h">Transaction templates</h2>
+          <h2 id="tx-h">BSV transactions</h2>
           <span class="count">${txs.length}</span>
         </div>
         ${txs.map(txCard).reverse().join('')}
@@ -120,20 +147,21 @@ function renderSession() {
           <span class="mono wrap reveal" tabindex="0" title="Hover or focus to reveal">${session.rootPrivHex}</span>
         </div>
         <ol class="chain-list">
-          ${keys.map((k) => `<li><span class="chain-i">K${k.index}</span><span class="mono">${short(k.pubHex, 10, 6)}</span><span class="chain-role">${txs[k.index].role}</span></li>`).join('')}
+          ${keys.map((k) => `<li><span class="chain-i">K${k.index}</span><span class="mono" title="${k.address}">${short(k.address, 10, 6)}</span><span class="chain-role">${txs[k.index].role}</span></li>`).join('')}
         </ol>
         <p class="chain-path mono">${ACCOUNT_PATH}/i' (hardened)</p>
         <button type="button" class="btn-end" id="end">End session and discard keys</button>
       </aside>
     </div>
 
-    <p class="disclaimer">Demo only. Keys live in this tab's memory and disappear when you close it or end the session. Templates are not funded or broadcast. Don't send coins to these keys.</p>
+    <p class="disclaimer">Demo only. Keys live in this tab's memory and disappear when you close it or end the session. Each transaction is really signed by its key, but it spends a placeholder 1-sat input, so it won't be accepted until it's re-signed against a real funding UTXO. Nothing is broadcast. Don't send coins to these addresses.</p>
   </main>`;
 
   app.querySelectorAll('.btn-role').forEach((b) =>
-    b.addEventListener('click', () => {
+    b.addEventListener('click', async () => {
       const role = b.dataset.role;
-      addEvent(role, role === 'provider' ? 'Provider' : 'Recipient');
+      app.querySelectorAll('.btn-role').forEach((x) => (x.disabled = true));
+      await addEvent(role, role === 'provider' ? 'Provider' : 'Recipient');
       renderSession();
       app.querySelector('.tx')?.classList.add('tx-new');
     }));

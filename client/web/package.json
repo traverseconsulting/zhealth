@@ -3,12 +3,19 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "scripts": { "dev": "vite", "build": "vite build", "preview": "vite preview" },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
   "dependencies": {
+    "@bsv/sdk": "^2.2.0",
     "@noble/curves": "^1.9.0",
     "@noble/hashes": "^1.8.0",
     "@scure/base": "^1.2.0",
     "@scure/bip32": "^1.7.0"
   },
-  "devDependencies": { "vite": "^6.0.0" }
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
 }
