@@ -16,12 +16,14 @@ records, and it keeps its own SQL copy of the database.
 
 Every record is a 1-satoshi **PushDrop token**: a public key with `OP_CHECKSIG`, then public
 fields, then a signature by that key over the fields. The tokens are spendable, so spending
-one carries meaning (closing a request, revoking a device). The word "zhealth" does not
-appear in any record text. The overlay is identified on-chain by its **ROOT** token.
+one carries meaning (closing a request, revoking a device). There is no `zhealth` marker
+push: a field that is exactly `zhealth` (any case) is rejected. Text is matched byte for byte and
+case-sensitively against the catalog, in sentence case (`Hearing test`, not `HEARING TEST`), per spec
+5.3.1 and V-ENC-02. The overlay is identified on-chain by its **ROOT** token.
 
 | Kind | Fields after `[kind, "1"]` | Locked to | Rule in `tm_zhealth` |
 |---|---|---|---|
-| ROOT | `zHealth`, `tm_zhealth`, `ls_zhealth` | registrar key | Must be the configured registrar key |
+| ROOT | `tm_zhealth`, `ls_zhealth` | registrar key | Must be the configured registrar key |
 | DEVICE | devicePub, model, serial, service IDs (8 bytes each) | registrar key | Registrar only; every service ID is in the catalog. **Spend = revoke.** |
 | REQUEST | label, service ID | patient one-time key A | Service ID is in the catalog; label matches it |
 | RESULT | `"Label: value"`, service ID, devicePub, device signature | provider visit key D | Device is registered, not revoked, and trusted for the service. The device signature covers `svcId\|value\|D\|A'`, where A' is a P2PKH output in the same tx |
@@ -60,7 +62,7 @@ The test `a joining node downloads the public database…` runs these steps betw
 
 ```bash
 npm install
-npm test                                   # 7 end-to-end tests (Node 20+)
+npm test                                   # 8 end-to-end tests (Node 20+)
 ZH_REGISTRAR_KEY=<hex> ZH_CHAIN=main npm run dev   # local node on :8080, SQLite
 ```
 

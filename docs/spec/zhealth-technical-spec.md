@@ -1,6 +1,6 @@
 # zHealth Technical Specification
 
-Version 0.2 (Draft), November 14, 2026
+Version 0.3 (Draft), November 14, 2026
 Status: Draft for review
 Normative source: "zHealth: A Peer-to-Peer Healthcare Data System" whitepaper (Samir Bhattarai). When this spec and the whitepaper disagree, the whitepaper wins. Fix the spec to match.
 
@@ -87,7 +87,7 @@ A zHealth node is an **application-layer overlay service** that runs next to a T
 | Broadcast event transactions (7.2 step 6) | **Propagation Service** | Submit raw (extended format) transactions over gRPC or HTTP. Propagation forwards to the Validator for consensus checks. |
 | Learn about rejected transactions | **P2P Service** (rejected-tx notifications fed by the `kafka_rejectedTxConfig` topic) | Mark the event `failed` and start the 7.5 retry. |
 | Fetch transactions, block headers, subtrees, UTXOs | **Asset Server** (HTTP/WebSocket) | `getTransaction`, `GetBlockHeader(s)`, `GetBestBlockHeader`, `GetBlock`, `GetSubtree`, `GetUTXO`. Used for sync (9.2), Merkle proofs (7.6), and checking funding outputs. |
-| React to new blocks and reorgs | **Blockchain Service** `Subscribe` (gRPC server stream) | When a block is added, scan it for `zhealth` outputs and update the element counts and pubkey index (6.2, 8.3). On a reorg or block invalidation, roll back the affected counts. |
+| React to new blocks and reorgs | **Blockchain Service** `Subscribe` (gRPC server stream) | When a block is added, match its transactions against admitted zHealth records (5.3, 9.4) and update the element counts and pubkey index (6.2, 8.3). On a reorg or block invalidation, roll back the affected counts. |
 | Bitcoin-compatible tooling | **RPC Service** | Optional: `sendrawtransaction`, `getrawtransaction`, `getblockheader` for wallets and test tooling. |
 
 Integration rules:
@@ -224,13 +224,32 @@ Each event is broadcast as **one transaction**:
 
 | Output | Script | Value |
 |---|---|---|
-| 0 | `OP_FALSE OP_RETURN "zhealth" <zh> <event JSON bytes>` | 0 |
+| 0 | `OP_FALSE OP_RETURN <event JSON bytes>` | 0 |
 | 1 | P2PKH to `fee.validator` | `fee.validation_sat` |
 | 2 (optional) | Change to a fresh client address | remainder |
 
-- The prefix push MUST be the ASCII bytes `zhealth`. Nodes use it to find zHealth transactions.
+- **[DECISION]** There is **no protocol prefix**. No output carries a `zhealth` push. The protocol version is the `zh` field inside the event (and field 1 of an overlay token). Nodes find zHealth transactions because clients submit them to the `tm_zhealth` topic (BRC-22) and lookups return them (9.4), not by scanning for a marker.
 - Inputs MUST come from the settlement funding transaction (7.4). Inputs MUST NOT be signed by event keys, so funding is never tied to identity keys.
 - **[DECISION]** One event per transaction, as the whitepaper says ("broadcast as independent transactions").
+
+#### 5.3.1 Registered output forms
+
+A zHealth output MUST be one of these forms:
+
+| Form | Script | Used for |
+|---|---|---|
+| A. Overlay token (normative) | PushDrop token: `<key> OP_CHECKSIG <kind> "1" <fields…> <sig> OP_DROP…` (9.4). ROOT fields are `tm_zhealth`, `ls_zhealth`. | All overlay records: ROOT, DEVICE, REQUEST, RESULT, CLOSE, EVENT |
+| B. Text record (web client) | `OP_FALSE OP_RETURN <text>` then, as needed, `<service ID (8 bytes)>` `<device pubkey (33 bytes)>` `<device signature (DER)>` | Readable app events, service requests and results |
+| C. Full event | `OP_FALSE OP_RETURN <event JSON bytes>` (5.1) | Signed FHIR events |
+
+The record text in forms A and B MUST be one of:
+
+- an event text: `Welcome to the Zhealth`, `Provider` or `Recipient`
+- a service label from the catalog (`overlay/src/catalog.ts`), for example `Hearing test`
+- a result: the service label, then `: `, then the reading, for example `Hearing test: Pass, 25 dB both ears`
+- a device registration (form B only): `Device registered: <model> <serial>`, followed by the device pubkey and its service IDs
+
+**[DECISION]** Text is written exactly as it appears in the catalog, in **sentence case** (`Hearing test`, not `HEARING TEST`). It is UTF-8 and compared **byte for byte, case-sensitively**. Apps MAY show the text in capitals on screen, but MUST NOT change the bytes they put on-chain. The service ID identifies the service. The text is for people reading the chain.
 
 ### 5.4 FHIR payload
 
@@ -466,9 +485,9 @@ A node MUST run these checks, in order, before broadcasting or counting an event
 | Code | Rule |
 |---|---|
 | V-ENC-01 | Transaction parses and passes ledger consensus and standardness rules. |
-| V-ENC-02 | Output 0 is `OP_FALSE OP_RETURN` with first push `zhealth` and second push a supported `zh` version. |
-| V-ENC-03 | Payload is valid UTF-8 JSON, ≤ 4 KB, no duplicate keys. |
-| V-ENC-04 | Payload equals its JCS canonical form, apart from `sig` placement. |
+| V-ENC-02 | The zHealth output is one of the registered forms in 5.3.1 (overlay token, text record or full event) and carries no protocol prefix: a push whose bytes are exactly `zhealth` (any case) is rejected. In forms A and B the record text matches the catalog byte for byte and case-sensitively, and any service ID push is a catalog service ID whose label begins the text. Overlay tokens also have version field `1`. |
+| V-ENC-03 | Form C: payload is valid UTF-8 JSON, ≤ 4 KB, no duplicate keys. |
+| V-ENC-04 | Form C: payload equals its JCS canonical form, apart from `sig` placement. |
 
 ### 8.2 Envelope
 
@@ -567,7 +586,7 @@ Peers MUST re-validate gossiped events independently. They don't trust the publi
 ### 9.2 Joining and sync
 
 1. A new node gets peers from a seed list or from `/v1/peers`.
-2. It downloads the event list via `/v1/sync` from height 0 (or a checkpoint). Alternatively, it rebuilds the list by scanning blocks from its Teranode Asset Server for `zhealth` outputs.
+2. It downloads the event list via `/v1/sync` from height 0 (or a checkpoint). Alternatively, it replays the `ls_zhealth` feed (9.4). There is no on-chain prefix to scan for (5.3).
 3. It checks each event's Merkle proof against block headers it has verified itself. It does not rely on the peer for this.
 4. It re-runs Section 8 on every event and rebuilds element counts and the pubkey index.
 5. When it's caught up, it starts quoting and validating.
@@ -586,7 +605,7 @@ Lightweight clients keep block headers only. To check an event, they fetch the t
 - `tm_zhealth` enforces the record rules, the trusted-device rule and the close rule (see `overlay/README.md`). `ls_zhealth` indexes them in SQL and answers queries.
 - The ROOT token, locked to the registrar key, identifies the overlay on-chain. A joining node reads the registrar key from ROOT and replays the `since` feed (or uses GASP), re-validating each record and checking every SPV proof.
 - Nodes advertise with SHIP/SLAP (BRC-88) when run on OverlayExpress.
-- This replaces the `/v1/sync` path in 9.2 for overlay records. V-ENC-02 (a `zhealth` prefix in OP_RETURN) does not apply to overlay tokens.
+- This replaces the `/v1/sync` path in 9.2 for overlay records. Overlay tokens are form A of 5.3.1 and are checked by V-ENC-02.
 
 ---
 
@@ -613,6 +632,7 @@ Based on whitepaper Section 10. This is future scope and not needed for v1.
 | Privacy | Fixture with a name / MRN / full date / ZIP-5 in each field is rejected with the right code. |
 | Settlement | Happy path. Expired quote. Partial broadcast. Keys not destroyed until all events are accepted. |
 | Sync | Fresh node rebuilds identical counts and pubkey index from a test chain. |
+| Encoding | A `zhealth` push, `HEARING TEST` (wrong case) and a label that doesn't match its service ID are each rejected V-ENC-02. `Hearing test` is accepted. |
 
 ---
 
@@ -630,6 +650,8 @@ Based on whitepaper Section 10. This is future scope and not needed for v1.
 | D-6 | One halving curve per coded element. | 5.4.2 |
 | D-7 | Fee goes to the validator chosen at quote time, committed in the signed event. | 6.5 |
 | D-8 | Year-month date precision on-chain. | 8.6 |
+| D-9 | No `zhealth` prefix on-chain. Records are found through the `tm_zhealth` topic and `ls_zhealth` lookups. | 5.3, 9.4 |
+| D-10 | Record text uses the catalog's sentence case and is compared case-sensitively. | 5.3.1 |
 
 ### 12.2 Open issues
 

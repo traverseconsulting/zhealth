@@ -12,7 +12,7 @@
  *   DEVICE  spent  -> the registrar revoked the device
  *
  * Record kinds (field 0) and their fields:
- *   ROOT    [ROOT, v, name, topic, lookupService, sig]          locked to the registrar key
+ *   ROOT    [ROOT, v, topic, lookupService, sig]                locked to the registrar key
  *   DEVICE  [DEVICE, v, devicePub, model, serial, svcIds, sig]  locked to the registrar key
  *   REQUEST [REQUEST, v, label, svcId, sig]                     locked to the patient's one-time key A
  *   RESULT  [RESULT, v, "Label: value", svcId, devicePub, deviceSig, sig]
@@ -20,8 +20,10 @@
  *   CLOSE   [CLOSE, v, requestTxid, sig]                        spends REQUEST, locked to a fresh patient key
  *   EVENT   [EVENT, v, text, sig]                               Welcome / role selection
  *
- * The word "zhealth" never appears in a record's text. The overlay is
- * identified on-chain by its ROOT token, which names the topic and lookup service.
+ * No field is a "zhealth" marker (spec V-ENC-02): a field whose bytes are exactly
+ * "zhealth" in any case is rejected. Text is compared byte for byte and
+ * case-sensitively against the catalog (spec 5.3.1). The overlay is identified
+ * on-chain by its ROOT token, which names the topic and lookup service.
  */
 import { Hash, PublicKey, Signature, Script, Utils, PushDrop, P2PKH, Transaction } from '@bsv/sdk'
 import type { WalletInterface, WalletProtocol } from '@bsv/sdk'
@@ -30,7 +32,6 @@ import { CATALOG, CatalogEntry } from './catalog.js'
 export const TOPIC = 'tm_zhealth'
 export const LOOKUP_SERVICE = 'ls_zhealth'
 export const VERSION = '1'
-export const NETWORK_NAME = 'zHealth'
 /** BRC-43 protocol used to derive record keys. Only affects key derivation; never written on-chain. */
 export const PROTOCOL_ID: WalletProtocol = [0, 'zhealth']
 
@@ -68,7 +69,6 @@ export interface DecodedRecord {
   lockingKey: string
   fields: number[][]
   // kind-specific, all public
-  name?: string
   topic?: string
   lookupService?: string
   devicePub?: string
@@ -100,7 +100,10 @@ export function decodeRecord (script: Script): DecodedRecord {
   if (all.length < 3) fail('too few fields')
   const sig = all[all.length - 1]
   const fields = all.slice(0, -1)
-  for (const f of fields) if (f.length > LIMIT) fail('field too long')
+  for (const f of fields) {
+    if (f.length > LIMIT) fail('field too long')
+    if (f.length === 7 && fromUtf8(f).toLowerCase() === 'zhealth') fail('V-ENC-02: protocol prefix push is not allowed')
+  }
   const kind = fromUtf8(fields[0]) as Kind
   if (!KINDS.includes(kind)) fail('unknown record kind')
   const version = fromUtf8(fields[1])
@@ -115,8 +118,8 @@ export function decodeRecord (script: Script): DecodedRecord {
   const need = (k: number): void => { if (n !== k) fail(`${kind} needs ${k} fields`) }
   switch (kind) {
     case 'ROOT':
-      need(5)
-      r.name = fromUtf8(fields[2]); r.topic = fromUtf8(fields[3]); r.lookupService = fromUtf8(fields[4])
+      need(4)
+      r.topic = fromUtf8(fields[2]); r.lookupService = fromUtf8(fields[3])
       break
     case 'DEVICE': {
       need(6)

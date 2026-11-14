@@ -88,10 +88,10 @@ test('catalog has 33 services with unique public IDs that match the web client',
 
 test('ROOT identifies the overlay; only the registrar can publish it', async () => {
   const { node, registrar, regKey, rejects } = await setup()
-  const good = await tx([{ script: await lockRecord(registrar, 'registrar', { kind: 'ROOT', fields: ['zHealth', 'tm_zhealth', 'ls_zhealth'] }) }])
+  const good = await tx([{ script: await lockRecord(registrar, 'registrar', { kind: 'ROOT', fields: ['tm_zhealth', 'ls_zhealth'] }) }])
   assert.deepEqual(await submit(node, good), [0])
   const imposter = new ProtoWallet(PrivateKey.fromRandom())
-  const bad = await tx([{ script: await lockRecord(imposter, 'registrar', { kind: 'ROOT', fields: ['zHealth', 'tm_zhealth', 'ls_zhealth'] }) }])
+  const bad = await tx([{ script: await lockRecord(imposter, 'registrar', { kind: 'ROOT', fields: ['tm_zhealth', 'ls_zhealth'] }) }])
   assert.deepEqual(await submit(node, bad), [])
   assert.match(rejects.at(-1)!, /registrar/)
   const roots = await lookup(node, { kind: 'root' })
@@ -188,7 +188,7 @@ test('revoking a device (spending its token) stops new results', async () => {
 
 test('a joining node downloads the public database from an existing node and verifies every record', async () => {
   const a = await setup()
-  await submit(a.node, await tx([{ script: await lockRecord(a.registrar, 'registrar', { kind: 'ROOT', fields: ['zHealth', 'tm_zhealth', 'ls_zhealth'] }) }]))
+  await submit(a.node, await tx([{ script: await lockRecord(a.registrar, 'registrar', { kind: 'ROOT', fields: ['tm_zhealth', 'ls_zhealth'] }) }]))
   const th = await registerDevice(a.node, a.registrar, 'Thermometer', 'TH-0001', ['temperature'])
   const bpm = await registerDevice(a.node, a.registrar, 'Blood pressure monitor', 'BP-0001', ['bp', 'pulse'])
   const r1 = await patientRequest(a.node, 'temperature')
@@ -220,4 +220,19 @@ test('a joining node downloads the public database from an existing node and ver
   assert.equal((await lookup(b, { kind: 'request', status: 'open' })).length, 1)
   assert.equal((await lookup(b, { kind: 'request', status: 'closed' })).length, 1)
   await a.node.close(); await b.close()
+})
+
+test('V-ENC-02: catalog text is case-sensitive and no zhealth marker push is accepted', async () => {
+  const { node, rejects } = await setup()
+  assert.deepEqual((await patientRequest(node, 'hearing', 'Hearing test')).admitted, [0])
+  assert.deepEqual((await patientRequest(node, 'hearing', 'HEARING TEST')).admitted, [])
+  assert.match(rejects.at(-1)!, /does not match/)
+  for (const marker of ['zhealth', 'ZHEALTH', 'zHealth']) {
+    const w = new ProtoWallet(PrivateKey.fromRandom())
+    const t = await tx([{ script: await lockRecord(w, 'e', { kind: 'EVENT', fields: [marker] }) }])
+    assert.deepEqual(await submit(node, t), [])
+  }
+  const w = new ProtoWallet(PrivateKey.fromRandom())
+  assert.deepEqual(await submit(node, await tx([{ script: await lockRecord(w, 'e', { kind: 'EVENT', fields: ['Welcome to the Zhealth'] }) }])), [0])
+  await node.close()
 })

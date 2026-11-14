@@ -49,7 +49,7 @@ npm test
 
 ## Status
 
-Draft protocol (spec v0.2). The open issues are listed in spec Section 12. The most important one is **O-2**: readable on-chain FHIR (whitepaper) vs. the thesis prototype's encrypted off-chain storage.
+Draft protocol (spec v0.3). The open issues are listed in spec Section 12. The most important one is **O-2**: readable on-chain FHIR (whitepaper) vs. the thesis prototype's encrypted off-chain storage.
 
 ## Security
 

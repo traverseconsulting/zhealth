@@ -9,7 +9,7 @@ import { Transaction, PublicKey, Signature } from '@bsv/sdk'
 import type { AdmittanceInstructions } from '@bsv/sdk'
 import type { TopicManager } from '@bsv/overlay'
 import {
-  TOPIC, LOOKUP_SERVICE, NETWORK_NAME, EVENT_TEXTS,
+  TOPIC, LOOKUP_SERVICE, EVENT_TEXTS,
   decodeRecord, serviceById, deviceMessage, p2pkhAddresses, RecordError
 } from './protocol.js'
 import type { DecodedRecord } from './protocol.js'
@@ -58,7 +58,7 @@ export class ZHealthTopicManager implements TopicManager {
     switch (r.kind) {
       case 'ROOT':
         if (r.lockingKey !== this.opts.registrarKey) no('ROOT must be locked to the registrar key')
-        if (r.name !== NETWORK_NAME || r.topic !== TOPIC || r.lookupService !== LOOKUP_SERVICE) no('ROOT names the wrong overlay')
+        if (r.topic !== TOPIC || r.lookupService !== LOOKUP_SERVICE) no('ROOT names the wrong overlay')
         return
 
       case 'DEVICE': {
@@ -125,11 +125,13 @@ and carries public fields signed by that key.
 
 | Kind | Rule |
 |---|---|
-| ROOT | Locked to the registrar key; names zHealth / tm_zhealth / ls_zhealth. Identifies the overlay on-chain. |
+| ROOT | Locked to the registrar key; names tm_zhealth / ls_zhealth. Identifies the overlay on-chain. |
 | DEVICE | Locked to the registrar key; every service ID is in the catalog. Spending it revokes the device. |
 | REQUEST | Service ID is in the catalog and the label matches it. Locked to the patient's one-time key. |
 | RESULT | Text is "Label: value"; the device is registered, not revoked, trusted for the service, and its signature covers service, value, visit key and a P2PKH close address paid by the same transaction. |
 | CLOSE | Spends the REQUEST token it names. |
 | EVENT | One of: ${EVENT_TEXTS.join(', ')}. |
+
+No field may be a "zhealth" marker push, and text is compared case-sensitively with the catalog (spec V-ENC-02).
 
 Spent zHealth coins are retained as history.`
