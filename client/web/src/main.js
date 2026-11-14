@@ -27,7 +27,7 @@ function renderWelcome() {
   app.innerHTML = `
   <main class="welcome">
     <div class="welcome-inner">
-      <p class="eyebrow">Peer-to-peer healthcare data</p>
+      <p class="eyebrow">Peer-to-peer healthcare system</p>
       <button class="btn-welcome" id="welcome" type="button">
         <span>Welcome to zHealth</span>
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
