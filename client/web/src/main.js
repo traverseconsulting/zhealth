@@ -310,11 +310,11 @@ function visitPanel() {
          <div><dt>Device signature</dt><dd class="mono wrap">${short(v.reading.sig, 16, 12)}</dd></div>` : ''}
          <div><dt>Close address A'</dt><dd class="mono wrap">${v.resultTx.tpl.payTo}</dd></div></dl>
          ${v.reading ? `<h3 class="checks-h">Network check before accepting the result ${v.check.ok ? '<span class="pill pill-ok">Accepted</span>' : '<span class="pill pill-bad">Rejected</span>'}</h3>${checks(v.check)}
-         ${v.forged ? `<h3 class="checks-h">Same reading from an unregistered thermometer <span class="pill pill-bad">${v.forged.ok ? 'Accepted' : 'Rejected'}</span></h3>${checks(v.forged)}`
+         ${v.forged ? `<h3 class="checks-h">Same reading from an unregistered ${esc(v.reading.device.model.toLowerCase())} <span class="pill pill-bad">${v.forged.ok ? 'Accepted' : 'Rejected'}</span></h3>${checks(v.forged)}`
            : `<button type="button" class="btn-ghost" id="v-forge">Try the same reading from an unregistered device</button>`}`
          : '<p class="note">No trusted device is registered for this service yet, so the result was entered by hand and has no device signature.</p>'}`
       : devs.length
-        ? `<p>The ${esc(devs[0].model.toLowerCase())} measures the patient and signs the reading with its own registered key. Nobody types the value.</p>
+        ? `<p>${devs.length} registered device${devs.length > 1 ? 's' : ''} can measure ${esc(c.svc.label.toLowerCase())}. The chosen device takes the reading and signs it with its own registered key. Nobody types the value.</p>
            <div class="row"><label class="sr-only" for="v-device">Device</label>
            <select id="v-device">${devs.map((d, i) => `<option value="${i}">${esc(d.model)} ${d.serial}</option>`).join('')}</select>
            <button type="button" class="btn-submit" id="v-post">Take reading and close contract</button></div>`
@@ -348,10 +348,12 @@ function devicesPanel() {
   if (!registry) return '';
   return `
       <details class="devices">
-        <summary><span class="devices-h">Trusted devices</span><span class="count">${registry.devices.length} registered</span></summary>
+        <summary><span class="devices-h">Trusted devices</span><span class="count">${registry.devices.length} registered</span><span class="count">${new Set(registry.devices.flatMap((d) => d.services)).size} of ${Object.values(SERVICES).reduce((n, g) => n + g.items.length, 0)} services covered</span></summary>
         <p class="visit-lede">Each device has its own key pair. The network registrar <span class="mono">${short(registry.registrar.address, 8, 6)}</span> published one registration transaction per device, binding its public key to the public service IDs it may measure.</p>
+        ${[...new Set(registry.devices.map((d) => d.group))].map((g) => `
+        <h3 class="device-group">${g} <span class="muted">${registry.devices.filter((d) => d.group === g).length}</span></h3>
         <ul class="device-list">
-          ${registry.devices.map((d) => `
+          ${registry.devices.filter((d) => d.group === g).map((d) => `
           <li class="device">
             <div class="device-top"><strong>${esc(d.model)}</strong><span class="mono muted">${d.serial}</span>${d.reg.verified ? '<span class="pill pill-ok">Registered</span>' : ''}</div>
             <dl class="kv">
@@ -360,7 +362,7 @@ function devicesPanel() {
               <div><dt>Registration tx</dt><dd class="mono wrap">${d.reg.txid}</dd></div>
             </dl>
           </li>`).join('')}
-        </ul>
+        </ul>`).join('')}
       </details>`;
 }
 
@@ -535,7 +537,7 @@ function renderSession() {
   });
   on('v-forge', () => {
     const c = contractById(visit.matchedId);
-    const fake = unregisteredDevice();
+    const fake = unregisteredDevice(visit.reading.device.model);
     const r = visit.reading, payTo = visit.resultTx.tpl.payTo;
     const sig = signReading(fake, c.svc.sid, r.value, visit.D.pubHex, payTo);
     visit.forged = validateReading(registry, { svc: c.svc.sid, value: r.value, devicePub: fake.key.pubHex, sig, D: visit.D.pubHex, closeAddr: payTo });

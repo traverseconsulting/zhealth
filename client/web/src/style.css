@@ -265,3 +265,7 @@ h2 { font-size: var(--text-lg); }
 .checks li.ok::before { background: var(--accent); }
 .checks li.bad::before { background: #b42318; }
 .checks li.bad { color: #9b1c1c; }
+.device-group { margin: var(--space-4) 0 var(--space-2); font-size: var(--text-sm); font-weight: 600; display: flex; gap: var(--space-2); }
+.devices summary { flex-wrap: wrap; row-gap: var(--space-2); }
+.devices summary .count { white-space: nowrap; }
+.device { align-content: start; }
