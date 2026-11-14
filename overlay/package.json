@@ -8,7 +8,7 @@
   "types": "dist/src/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node --test dist/test/",
+    "test": "npm run build && node --test dist/test/*.test.js",
     "dev": "npm run build && node dist/src/dev-server.js",
     "start": "node dist/src/node.js"
   },
