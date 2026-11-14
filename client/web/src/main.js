@@ -1,6 +1,7 @@
 import './style.css';
 import { newSession, ACCOUNT_PATH } from './chain.js';
-import { buildTx, keyInfo, PLACEHOLDER_SATS } from './tx.js';
+import { buildTx, keyInfo, PLACEHOLDER_SATS, CLOSE_SATS } from './tx.js';
+import { matchCode, closeAddressForPatient, closeKeyForPatient, randomPeerKey } from './ecdh.js';
 
 const app = document.getElementById('app');
 const WELCOME_TEXT = 'Welcome to the Zhealth';
@@ -88,19 +89,26 @@ let view = 'roles';   // 'roles' | 'recipient' | 'provider'
 let session = null;   // HD session (in memory only)
 let keys = [];        // derived keys, in order
 let txs = [];
-let contracts = []; // { id, svc, req, reqN, status: 'open'|'fulfilled', ful, fulN, reward }         // { role, key, tpl }
+let contracts = [];
+let visit = null;    // clinic visit state (ECDH matching)
+let peerSeq = 0;
 
 const short = (h, a = 10, b = 8) => `${h.slice(0, a)}…${h.slice(-b)}`;
 const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-async function addEvent(role, text, extra = {}) {
+function deriveKey() {
   const key = session.nextKey();
   const info = keyInfo(key.privHex);
   if (info.pubHex !== key.pubHex) throw new Error('key mismatch between HD derivation and BSV SDK');
   key.address = info.address;
   key.wif = info.wif;
+  return key;
+}
+
+async function addEvent(role, text, extra = {}, opts = {}) {
+  const key = opts.key || deriveKey();
   keys.push(key);
-  const t = { role, key, ...extra, tpl: await buildTx(text, key.privHex) };
+  const t = { role, key, ...extra, tpl: await buildTx(text, key.privHex, opts.payTo || null) };
   txs.push(t);
   return t;
 }
@@ -120,7 +128,7 @@ function renderWelcome() {
   </main>`;
   document.getElementById('welcome').addEventListener('click', async () => {
     session = newSession();
-    keys = []; txs = []; contracts = [];
+    keys = []; txs = []; contracts = []; visit = null;
     await addEvent('welcome', WELCOME_TEXT);
     view = 'roles';
     renderSession();
@@ -156,7 +164,7 @@ function txCard(t, n) {
         <span class="pill pill-${t.role}"${t.group ? ` style="background:${SERVICES[t.group].soft};color:${SERVICES[t.group].color}"` : ''}>${esc(label)}</span>
         ${t.type ? `<span class="pill pill-type mono">${t.type}</span>` : ''}
         ${t.role === 'service' && t.contractId ? `<span class="pill pill-contract">Contract #${t.contractId} · ${contractById(t.contractId).status}</span>` : ''}
-        ${t.role === 'fulfil' ? `<span class="pill pill-provider">Fulfils contract #${t.contractId} · +${REWARD_SATS} sat</span>` : ''}
+        ${t.role === 'fulfil' ? `<span class="pill pill-provider">Closes a contract privately · +${REWARD_SATS} sat</span>` : ''}
         <span class="pill ${x.verified ? 'pill-ok' : 'pill-bad'}">${x.verified ? 'Signature valid' : 'Signature invalid'}</span>
       </div>
       <span class="tx-meta mono">K${t.key.index} · ${t.key.path}</span>
@@ -177,6 +185,7 @@ function txCard(t, n) {
         <dl class="tx-fields">
           <div><dt>OP_RETURN text</dt><dd class="tx-text">“${esc(x.text)}”</dd></div>
           <div><dt>Script</dt><dd class="mono wrap">OP_FALSE OP_RETURN "${esc(x.text)}"</dd></div>
+          ${x.payTo ? `<div><dt>Output 1 · ${CLOSE_SATS} sat to patient's ECDH close address</dt><dd class="mono wrap">${x.payTo}</dd></div>` : ''}
         </dl>
       </div>
     </div>
@@ -189,6 +198,7 @@ function txCard(t, n) {
         <li><span class="push-label">Spends</span><span class="mono wrap">${x.sourceTxid}:0 (placeholder, ${PLACEHOLDER_SATS} sat)</span></li>
         <li><span class="push-label">Locking</span><span class="mono wrap">${x.lockingAsm}</span></li>
         <li><span class="push-label">Unlocking</span><span class="mono wrap">&lt;sig&gt; ${x.unlockPub}</span></li>
+        ${x.payTo ? `<li><span class="push-label">Output 1</span><span class="mono wrap">${x.payToAsm}</span></li>` : ''}
         <li><span class="push-label">OP_RETURN</span><span class="mono wrap">${x.opReturnAsm}</span></li>
       </ol>
       <div class="raw">
@@ -233,6 +243,79 @@ function lastSigned() {
       </div>`;
 }
 
+
+const resultDefault = (label) => (label === 'Take temperature' ? '37.0 °C' : label === 'Take blood pressure' ? '120/80 mmHg' : label === 'Check pulse' ? '72 bpm' : 'Normal');
+
+function visitPanel() {
+  const own = contracts.filter((c) => !c.peer && c.status === 'open');
+  const v = visit;
+  const step = (n, who, title, body, done) => `
+        <li class="vstep ${done ? 'done' : ''}">
+          <div class="vstep-head"><span class="vstep-n">${n}</span><span class="who who-${who.toLowerCase()}">${who}</span><span class="vstep-title">${title}</span></div>
+          <div class="vstep-body">${body}</div>
+        </li>`;
+  if (!v) {
+    return `
+      <section class="visit" aria-labelledby="visit-h">
+        <div class="section-head"><h2 id="visit-h">Clinic visit</h2><span class="count">ECDH matching</span></div>
+        <p class="visit-lede">The patient walks in. The doctor finds the patient's contract among all open ones, posts the result and closes it, and neither the patient's key nor the request transaction appears in the result.</p>
+        ${own.length
+          ? `<button type="button" class="btn-submit" id="v-start">Start visit</button>`
+          : `<p class="empty">Request a service on the Recipient page first. That's the patient's contract.</p>`}
+      </section>`;
+  }
+  const c = v.matchedId ? contractById(v.matchedId) : null;
+  const s1 = step(1, 'Doctor', 'Show a one-time visit key',
+    `<p>Doctor derives a new key and shows its public key to the patient, for example as a QR code.</p>
+     <dl class="kv"><div><dt>Doctor public key D</dt><dd class="mono wrap">${v.D.pubHex}</dd></div></dl>`, true);
+  const s2 = step(2, 'Patient', 'Compute a match code',
+    v.code
+      ? `<p>Patient computes the shared secret <span class="mono">S = a·D</span> from the private key that signed their request, then hashes it.</p>
+         <dl class="kv"><div><dt>Match code M (shown to the doctor)</dt><dd class="mono code">${v.code}</dd></div>
+         <div><dt>Patient's own contract</dt><dd>#${v.ownId} · ${esc(contractById(v.ownId).svc.label)}</dd></div></dl>
+         <p class="note">M is useless to anyone who overhears it: mapping it to a contract needs the doctor's private key.</p>`
+      : `<p>Patient picks their open contract and computes <span class="mono">S = a·D</span>. Nothing about their key leaves their device.</p>
+         <div class="row"><label class="sr-only" for="v-own">Patient's contract</label>
+         <select id="v-own">${own.map((x) => `<option value="${x.id}">#${x.id} · ${esc(x.svc.label)}</option>`).join('')}</select>
+         <button type="button" class="btn-submit" id="v-code">Compute match code</button></div>`, !!v.code);
+  const s3 = !v.code ? '' : step(3, 'Doctor', 'Find the exact contract',
+    v.scan
+      ? `<p>For every open contract, the doctor computes <span class="mono">d·A</span> from the request key <span class="mono">A</span>, hashes it and compares it with M.</p>
+         <table class="scan"><thead><tr><th>Contract</th><th>Service</th><th>Doctor's code</th><th>Match</th></tr></thead><tbody>
+         ${v.scan.map((r) => `<tr class="${r.match ? 'hit' : ''}"><td>#${r.id}</td><td>${esc(r.label)}</td><td class="mono">${r.code}</td><td>${r.match ? '<span class="pill pill-ok">Match</span>' : '<span class="muted">No</span>'}</td></tr>`).join('')}
+         </tbody></table>
+         <p class="note">${v.scan.filter((r) => r.match).length === 1 ? `Exactly one match: contract #${v.matchedId}.` : 'No unique match.'} ${v.scan.filter((r) => r.label === contractById(v.ownId).svc.label).length} open "${esc(contractById(v.ownId).svc.label)}" contracts were searched.</p>`
+      : `<button type="button" class="btn-submit" id="v-scan">Scan ${contracts.filter((x) => x.status === 'open').length} open contracts</button>`, !!v.scan);
+  const s4 = !c ? '' : step(4, 'Doctor', 'Post the result and close the contract',
+    v.resultTx
+      ? `<p>Result posted, signed by the doctor's visit key. Output 1 pays ${CLOSE_SATS} sat to the patient's close address <span class="mono">A'</span>, derived from <span class="mono">A</span> and the shared secret (BRC-42).</p>
+         <dl class="kv"><div><dt>OP_RETURN</dt><dd>“${esc(v.resultTx.tpl.text)}”</dd></div>
+         <div><dt>Close address A'</dt><dd class="mono wrap">${v.resultTx.tpl.payTo}</dd></div></dl>`
+      : `<div class="row"><label for="v-result">${esc(c.svc.label)} result</label>
+         <input id="v-result" type="text" value="${esc(resultDefault(c.svc.label))}" maxlength="40" />
+         <button type="button" class="btn-submit" id="v-post">Post result and close contract</button></div>`, !!v.resultTx);
+  const s5 = !v.resultTx ? '' : step(5, 'Patient', 'Confirm the result is theirs',
+    `<p>Patient derives the close key <span class="mono">a'</span> from their key <span class="mono">a</span> and <span class="mono">D</span>, and checks it controls output 1.</p>
+     <dl class="kv"><div><dt>Patient-derived address</dt><dd class="mono wrap">${v.patientClose.address}</dd></div></dl>
+     <p class="note">${v.patientClose.address === v.resultTx.tpl.payTo ? '<span class="pill pill-ok">Output 1 belongs to the patient</span>' : '<span class="pill pill-bad">Address mismatch</span>'}</p>`, true);
+  const pub = !v.resultTx ? '' : `
+        <div class="public-view">
+          <h3>What the public ledger sees</h3>
+          <ul>
+            <li><strong>Request tx</strong> signed by <span class="mono">${short(c.req.key.address, 8, 6)}</span>: “${esc(c.svc.label)}”</li>
+            <li><strong>Result tx</strong> signed by <span class="mono">${short(v.D.address, 8, 6)}</span>: “${esc(v.resultTx.tpl.text)}”, paying <span class="mono">${short(v.resultTx.tpl.payTo, 8, 6)}</span></li>
+            <li>No shared key, address or txid between them. The match code never goes on-chain. Only the patient and the doctor can link the two.</li>
+          </ul>
+        </div>`;
+  return `
+      <section class="visit" aria-labelledby="visit-h">
+        <div class="section-head"><h2 id="visit-h">Clinic visit</h2><span class="count">ECDH matching</span>
+          <button type="button" class="btn-link" id="v-reset">${v.resultTx ? 'New visit' : 'Cancel visit'}</button></div>
+        <ol class="vsteps">${s1}${s2}${s3}${s4}${s5}</ol>
+        ${pub}
+      </section>`;
+}
+
 function contractsPanel() {
   const open = contracts.filter((c) => c.status === 'open');
   const done = contracts.filter((c) => c.status === 'fulfilled');
@@ -248,15 +331,15 @@ function contractsPanel() {
               <span class="pill pill-type mono">${c.svc.type}</span>
             </div>
             <div class="contract-meta">
-              <span>Requested in Tx ${c.reqN} · K${c.req.key.index}</span>
+              <span>${c.peer ? 'Requested by another peer' : `Requested in Tx ${c.reqN} · K${c.req.key.index} (you)`}</span>
               <span class="mono" title="${c.req.tpl.txid}">${short(c.req.tpl.txid, 8, 6)}</span>
             </div>
           </div>
           <div class="contract-side">
             <span class="reward">${c.reward} sat</span>
             ${c.status === 'open'
-              ? `<button type="button" class="btn-submit" data-contract="${c.id}">Submit service</button>`
-              : `<span class="fulfilled">Fulfilled in Tx ${c.fulN} · K${c.ful.key.index}</span>`}
+              ? `<span class="open-tag">Open</span>`
+              : `<span class="fulfilled">Closed in Tx ${c.fulN} · K${c.ful.key.index}</span>`}
           </div>
         </li>`;
   };
@@ -265,12 +348,13 @@ function contractsPanel() {
         <div class="section-head">
           <h2 id="ct-h">Service contracts</h2>
           <span class="count">${open.length} open</span>
-          <span class="count">${done.length} fulfilled</span>
+          <span class="count">${done.length} closed</span>
           <span class="count count-earned">${earned} sat earned</span>
         </div>
         ${contracts.length
           ? `<ol class="contract-list">${[...open, ...done].map(card).join('')}</ol>`
           : `<p class="empty">No contracts yet. Each service a recipient requests shows up here for providers to fulfil.</p>`}
+        <button type="button" class="btn-ghost" id="add-peers">Add 4 requests from other peers</button>
         <p class="disclaimer">Rewards are demo amounts. Real payouts need escrow and funded inputs.</p>
       </section>`;
 }
@@ -279,6 +363,7 @@ function providerPanel() {
   return `
     <section class="provider" aria-labelledby="prov-h">
       <div class="recip-head">${backBtn}<h1 id="prov-h" class="prov-title">Provider</h1></div>
+      ${visitPanel()}
       ${contractsPanel()}
       <div class="grid">
         <section class="txlist" aria-labelledby="tx-h">
@@ -296,7 +381,7 @@ function providerPanel() {
             <span class="mono wrap reveal" tabindex="0" title="Hover or focus to reveal">${session.rootPrivHex}</span>
           </div>
           <ol class="chain-list">
-            ${keys.map((k) => `<li><span class="chain-i">K${k.index}</span><span class="mono" title="${k.address}">${short(k.address, 10, 6)}</span><span class="chain-role" title="${esc(txs[k.index].label || ROLE_LABEL[txs[k.index].role])}">${esc(txs[k.index].label || ROLE_LABEL[txs[k.index].role])}</span></li>`).join('')}
+            ${keys.map((k) => { const t = txs.find((x) => x.key === k); return `<li><span class="chain-i">K${k.index}</span><span class="mono" title="${k.address}">${short(k.address, 10, 6)}</span><span class="chain-role" title="${esc(t.label || ROLE_LABEL[t.role])}">${esc(t.label || ROLE_LABEL[t.role])}</span></li>`; }).join('')}
           </ol>
           <p class="chain-path mono">${ACCOUNT_PATH}/i' (hardened)</p>
           <button type="button" class="btn-end" id="end">End session and discard keys</button>
@@ -355,16 +440,49 @@ function renderSession() {
       renderSession();
       app.querySelector('.tx')?.classList.add('tx-new');
     }));
-  app.querySelectorAll('.btn-submit').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const c = contractById(Number(b.dataset.contract));
-      app.querySelectorAll('.btn-submit').forEach((x) => (x.disabled = true));
-      const text = `${c.svc.label} completed`;
-      c.ful = await addEvent('fulfil', text, { label: text, type: c.svc.type, contractId: c.id });
-      c.fulN = txs.length;
-      c.status = 'fulfilled';
-      renderSession();
-    }));
+  const on = (id, fn) => document.getElementById(id)?.addEventListener('click', fn);
+  on('v-start', () => { visit = { D: deriveKey() }; renderSession(); });
+  on('v-reset', () => { visit = null; renderSession(); });
+  on('v-code', () => {
+    const own = contractById(Number(document.getElementById('v-own').value));
+    visit.ownId = own.id;
+    visit.code = matchCode(own.req.key.privHex, visit.D.pubHex);       // patient: H(a·D)
+    renderSession();
+  });
+  on('v-scan', () => {
+    visit.scan = contracts.filter((x) => x.status === 'open').map((x) => {
+      const code = matchCode(visit.D.privHex, x.req.key.pubHex);        // doctor: H(d·A)
+      return { id: x.id, label: x.svc.label, code, match: code === visit.code };
+    });
+    const hits = visit.scan.filter((r) => r.match);
+    visit.matchedId = hits.length === 1 ? hits[0].id : null;
+    renderSession();
+  });
+  on('v-post', async (e) => {
+    e.target.disabled = true;
+    const c = contractById(visit.matchedId);
+    const value = (document.getElementById('v-result').value || '').trim() || resultDefault(c.svc.label);
+    const text = `${c.svc.label}: ${value}`;
+    const payTo = closeAddressForPatient(visit.D.privHex, c.req.key.pubHex, c.req.tpl.txid);   // doctor: A' from (d, A)
+    c.ful = await addEvent('fulfil', text, { label: text, type: c.svc.type, contractId: c.id }, { key: visit.D, payTo });
+    c.fulN = txs.length;
+    c.status = 'fulfilled';
+    visit.resultTx = c.ful;
+    visit.patientClose = closeKeyForPatient(c.req.key.privHex, visit.D.pubHex, c.req.tpl.txid); // patient: a' from (a, D)
+    renderSession();
+  });
+  on('add-peers', async (e) => {
+    e.target.disabled = true;
+    const picks = ['temperature', 'temperature', 'temperature', 'bp'];
+    for (const id of picks) {
+      const svc = findService(id);
+      const k = randomPeerKey();
+      const req = { role: 'peer', key: { ...k, index: null }, tpl: await buildTx(svc.label, k.privHex) };
+      contracts.push({ id: contracts.length + 1, svc, req, peer: true, status: 'open', reward: REWARD_SATS });
+    }
+    peerSeq += picks.length;
+    renderSession();
+  });
   document.getElementById('back')?.addEventListener('click', () => {
     view = 'roles';
     renderSession();
@@ -382,7 +500,7 @@ function renderSession() {
     window.scrollTo(0, 0);
   });
   document.getElementById('end')?.addEventListener('click', () => {
-    session = null; keys = []; txs = []; contracts = []; view = 'roles';
+    session = null; keys = []; txs = []; contracts = []; visit = null; view = 'roles';
     renderWelcome();
   });
 }
