@@ -167,7 +167,7 @@ function txCard(t, n) {
         <span class="flow-h">Output · 0 sat</span>
         <dl class="tx-fields">
           <div><dt>OP_RETURN text</dt><dd class="tx-text">“${esc(x.text)}”</dd></div>
-          <div><dt>Script</dt><dd class="mono wrap">OP_FALSE OP_RETURN "zhealth" "${esc(x.text)}"</dd></div>
+          <div><dt>Script</dt><dd class="mono wrap">OP_FALSE OP_RETURN "${esc(x.text)}"</dd></div>
         </dl>
       </div>
     </div>

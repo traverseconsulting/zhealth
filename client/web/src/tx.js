@@ -2,7 +2,7 @@
 //
 //   Input 0  : placeholder P2PKH UTXO at the key's BSV address
 //              unlocking script = <signature> <public key>   (SIGHASH_ALL|FORKID)
-//   Output 0 : OP_FALSE OP_RETURN "zhealth" <text>   (0 sat)
+//   Output 0 : OP_FALSE OP_RETURN <text>   (0 sat)
 //
 // The funding UTXO is a placeholder (1 sat, all to miner fee). The signature
 // commits to that outpoint, so a real funding UTXO means re-signing.
@@ -20,7 +20,6 @@ function opReturn(text) {
   const s = new Script();
   s.writeOpCode(OP.OP_FALSE);
   s.writeOpCode(OP.OP_RETURN);
-  s.writeBin(Utils.toArray('zhealth', 'utf8'));
   s.writeBin(Utils.toArray(text, 'utf8'));
   return s;
 }

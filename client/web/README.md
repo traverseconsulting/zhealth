@@ -13,7 +13,7 @@ Each transaction is built and signed with the official BSV SDK (`@bsv/sdk`):
 ```
 Input 0   spends a P2PKH UTXO at the key's address
           unlocking script: <signature> <public key>   (SIGHASH_ALL | FORKID)
-Output 0  OP_FALSE OP_RETURN "zhealth" <text>          (0 sat)
+Output 0  OP_FALSE OP_RETURN <text>          (0 sat)
 ```
 
 `<text>` is `Welcome to the Zhealth`, `Provider`, or `Recipient`. The app checks every signature with the SDK's script interpreter.
