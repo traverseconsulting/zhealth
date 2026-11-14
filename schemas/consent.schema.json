@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zhealth.dev/schemas/v1/consent.schema.json",
+  "title": "zHealth consent metadata (spec 5.5)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["basis", "scope", "granted_by", "policy", "expires"],
+  "properties": {
+    "basis": { "enum": ["patient-authorized", "treatment", "emergency", "legal-requirement", "device-autonomous"] },
+    "scope": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": { "enum": ["treatment", "payment", "operations", "research-deidentified", "public-health", "analytics"] }
+    },
+    "granted_by": { "enum": ["self", "delegate"] },
+    "policy": { "type": "string", "pattern": "^zh-consent-[0-9]+$" },
+    "expires": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

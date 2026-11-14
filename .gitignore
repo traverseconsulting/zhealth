@@ -1,0 +1,14 @@
+# Go
+/node/bin/
+*.test
+*.out
+# Secrets and local data — never commit keys or receipts
+*.env
+.env*
+receipts/
+*.receipt.json
+*.wif
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

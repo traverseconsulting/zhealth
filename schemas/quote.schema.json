@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zhealth.dev/schemas/v1/quote.schema.json",
+  "title": "zHealth fee quote response (spec 6.3)",
+  "type": "object",
+  "required": ["quote_id", "ref_height", "validator", "lines", "miner_fee_rate_sat_per_kb", "expires"],
+  "properties": {
+    "quote_id": { "type": "string" },
+    "ref_height": { "type": "integer", "minimum": 0 },
+    "validator": { "type": "string" },
+    "lines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["element", "count", "n", "validation_sat"],
+        "properties": {
+          "element": { "type": "string" },
+          "count": { "type": "integer", "minimum": 1 },
+          "n": { "type": "integer", "minimum": 0 },
+          "validation_sat": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "miner_fee_rate_sat_per_kb": { "type": "number", "minimum": 0 },
+    "expires": { "type": "string", "format": "date-time" }
+  }
+}

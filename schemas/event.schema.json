@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zhealth.dev/schemas/v1/event.schema.json",
+  "title": "zHealth event envelope (spec 5.1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["zh", "type", "ts", "seq", "pubkey", "desc", "consent", "fee", "nonce", "sig"],
+  "properties": {
+    "zh": { "const": "1" },
+    "type": {
+      "enum": [
+        "session.start", "session.end",
+        "appointment.schedule", "appointment.update",
+        "demographics.update",
+        "clinical.observation", "clinical.allergy", "clinical.immunization", "clinical.medication",
+        "clinical.diagnosis", "clinical.imaging", "clinical.careplan",
+        "record.view", "fhir.element", "service.dispatch"
+      ]
+    },
+    "element": { "type": "string", "pattern": "^([A-Za-z]+:[A-Za-z0-9]+:[A-Za-z0-9.\\-]+|meta:[a-z.]+)$" },
+    "ts": { "type": "string", "format": "date-time" },
+    "seq": { "type": "integer", "minimum": 0, "maximum": 2147483647 },
+    "pubkey": { "type": "string", "pattern": "^0[23][0-9a-f]{64}$" },
+    "desc": { "type": "string", "minLength": 1, "maxLength": 140 },
+    "fhir": { "type": "object", "required": ["resourceType"] },
+    "consent": { "$ref": "consent.schema.json" },
+    "fee": {
+      "type": "object", "additionalProperties": false,
+      "required": ["validation_sat", "validator", "quote_id"],
+      "properties": {
+        "validation_sat": { "type": "integer", "minimum": 0 },
+        "validator": { "type": "string", "minLength": 26, "maxLength": 35 },
+        "quote_id": { "type": "string" }
+      }
+    },
+    "nonce": { "type": "string", "pattern": "^b64:[A-Za-z0-9+/]{22}==$" },
+    "sig": { "type": "string", "pattern": "^30[0-9a-f]+$" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "enum": ["session.start", "session.end"] } } },
+      "then": { "not": { "required": ["fhir"] } }
+    },
+    {
+      "if": { "properties": { "type": { "pattern": "^(appointment|demographics|clinical|fhir|service)\\." } } },
+      "then": { "required": ["fhir", "element"] }
+    }
+  ]
+}
