@@ -118,9 +118,7 @@ function renderSession() {
     ${keyChip()}
   </header>
   <main class="session">
-    <section class="roles" aria-labelledby="roles-h">
-      <h1 id="roles-h">Who are you in this interaction?</h1>
-      <p class="lede">Each choice derives a new key from your root, and that key signs its own BSV transaction.</p>
+    <section class="roles" aria-label="Choose a role">
       <div class="role-buttons">
         <button type="button" class="btn-role" data-role="provider">
           <span class="role-name">Provider</span><span class="role-desc">Clinician, lab, device</span>
