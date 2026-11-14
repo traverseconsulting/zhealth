@@ -578,6 +578,16 @@ Checkpoints: **[DECISION]** Nodes MAY publish signed `(height, element_counts_ha
 
 Lightweight clients keep block headers only. To check an event, they fetch the transaction and Merkle proof from any node and confirm it's in a header on the most-work chain. They trust the node's Section 8 validation, or they run the checks themselves for single events.
 
+### 9.4 zHealth overlay (`tm_zhealth` / `ls_zhealth`)
+
+**[DECISION]** The public zHealth database is a BRC-22/BRC-24 overlay. It is implemented in `overlay/`.
+
+- Records are 1-sat PushDrop tokens with public fields and a self-signature: ROOT, DEVICE, REQUEST, RESULT, CLOSE and EVENT. They are spendable. Spending a REQUEST closes it; spending a DEVICE revokes it.
+- `tm_zhealth` enforces the record rules, the trusted-device rule and the close rule (see `overlay/README.md`). `ls_zhealth` indexes them in SQL and answers queries.
+- The ROOT token, locked to the registrar key, identifies the overlay on-chain. A joining node reads the registrar key from ROOT and replays the `since` feed (or uses GASP), re-validating each record and checking every SPV proof.
+- Nodes advertise with SHIP/SLAP (BRC-88) when run on OverlayExpress.
+- This replaces the `/v1/sync` path in 9.2 for overlay records. V-ENC-02 (a `zhealth` prefix in OP_RETURN) does not apply to overlay tokens.
+
 ---
 
 ## 10. Autonomous nodes and devices

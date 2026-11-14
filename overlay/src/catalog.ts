@@ -1,0 +1,40 @@
+// Service catalog, protocol version 1. Generated from client/web/src/main.js.
+// Each microservice has a public service ID: SHA-256("zhealth.service/" + slug), first 8 bytes.
+
+export interface CatalogEntry { slug: string, label: string, type: string, group: string }
+
+export const CATALOG: CatalogEntry[] = [
+  { slug: 'temperature', label: 'Take temperature', type: 'clinical.observation', group: 'vitals' },
+  { slug: 'vitals', label: 'Take vitals', type: 'clinical.observation', group: 'vitals' },
+  { slug: 'bp', label: 'Take blood pressure', type: 'clinical.observation', group: 'vitals' },
+  { slug: 'pulse', label: 'Check pulse', type: 'clinical.observation', group: 'vitals' },
+  { slug: 'spo2', label: 'Check oxygen level', type: 'clinical.observation', group: 'vitals' },
+  { slug: 'resp', label: 'Count breathing rate', type: 'clinical.observation', group: 'vitals' },
+  { slug: 'weight', label: 'Measure weight', type: 'clinical.observation', group: 'vitals' },
+  { slug: 'pain', label: 'Assess pain', type: 'clinical.observation', group: 'vitals' },
+  { slug: 'glucose', label: 'Check blood sugar', type: 'clinical.observation', group: 'tests' },
+  { slug: 'blood', label: 'Draw blood', type: 'service.dispatch', group: 'tests' },
+  { slug: 'urine', label: 'Collect urine sample', type: 'service.dispatch', group: 'tests' },
+  { slug: 'swab', label: 'Take a swab', type: 'service.dispatch', group: 'tests' },
+  { slug: 'ecg', label: 'Run ECG', type: 'service.dispatch', group: 'tests' },
+  { slug: 'cbc', label: 'Complete blood count', type: 'service.dispatch', group: 'labs' },
+  { slug: 'cmp', label: 'Metabolic panel', type: 'service.dispatch', group: 'labs' },
+  { slug: 'lipid', label: 'Cholesterol panel', type: 'service.dispatch', group: 'labs' },
+  { slug: 'a1c', label: 'HbA1c', type: 'service.dispatch', group: 'labs' },
+  { slug: 'tsh', label: 'Thyroid test', type: 'service.dispatch', group: 'labs' },
+  { slug: 'ua', label: 'Urinalysis', type: 'service.dispatch', group: 'labs' },
+  { slug: 'xray', label: 'Take X-ray', type: 'clinical.imaging', group: 'imaging' },
+  { slug: 'ultrasound', label: 'Do ultrasound', type: 'clinical.imaging', group: 'imaging' },
+  { slug: 'physical', label: 'Physical exam', type: 'service.dispatch', group: 'screenings' },
+  { slug: 'eye', label: 'Eye exam', type: 'service.dispatch', group: 'screenings' },
+  { slug: 'hearing', label: 'Hearing test', type: 'service.dispatch', group: 'screenings' },
+  { slug: 'depression', label: 'Depression screening', type: 'clinical.observation', group: 'screenings' },
+  { slug: 'skin', label: 'Skin check', type: 'service.dispatch', group: 'screenings' },
+  { slug: 'mammogram', label: 'Mammogram', type: 'clinical.imaging', group: 'screenings' },
+  { slug: 'colorectal', label: 'Colorectal screening', type: 'service.dispatch', group: 'screenings' },
+  { slug: 'pap', label: 'Pap test', type: 'service.dispatch', group: 'screenings' },
+  { slug: 'medication', label: 'Give medication', type: 'clinical.medication', group: 'treatment' },
+  { slug: 'vaccine', label: 'Give vaccine', type: 'clinical.immunization', group: 'treatment' },
+  { slug: 'wound', label: 'Dress wound', type: 'service.dispatch', group: 'treatment' },
+  { slug: 'iv', label: 'Start IV', type: 'service.dispatch', group: 'treatment' },
+]

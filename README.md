@@ -22,6 +22,7 @@ docs/          whitepaper, technical spec, architecture decision records
 schemas/       JSON Schema (draft 2020-12) for protocol objects
 node/          zHealth node (Go): fee/halving, validation rules, Teranode clients
 client/web/    zHealth web client: welcome, HD key chain, OP_RETURN templates
+overlay/       zHealth overlay: tm_zhealth topic manager + ls_zhealth lookup service (public database)
 ```
 
 ## Node quick start
@@ -35,6 +36,16 @@ go run ./cmd/zhealth-node   # serves http://localhost:8080/v1/info
 ```
 
 Current endpoints are scaffolding: `GET /v1/info`, `GET /v1/elements/{element}?n=<count>` (fee at a given count), `POST /v1/validate` (envelope checks only).
+
+## Overlay quick start
+
+Requires Node 20+ (22+ for the OverlayExpress production entry). See `overlay/README.md`.
+
+```bash
+cd overlay
+npm install
+npm test
+```
 
 ## Status
 
