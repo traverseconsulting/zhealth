@@ -43,7 +43,7 @@ const findService = (id) => {
 };
 
 const ROLE_LABEL = { welcome: 'Welcome', provider: 'Provider', recipient: 'Recipient' };
-let view = 'roles';   // 'roles' | 'recipient'
+let view = 'roles';   // 'roles' | 'recipient' | 'provider'
 let session = null;   // HD session (in memory only)
 let keys = [];        // derived keys, in order
 let txs = [];         // { role, key, tpl }
@@ -79,6 +79,7 @@ function renderWelcome() {
     await addEvent('welcome', WELCOME_TEXT);
     view = 'roles';
     renderSession();
+    window.scrollTo(0, 0);
   });
 }
 
@@ -154,6 +155,7 @@ function txCard(t, n) {
 function rolesPanel() {
   return `
     <section class="roles" aria-label="Choose a role">
+      ${lastSigned()}
       <div class="role-buttons">
         <button type="button" class="btn-role" data-role="provider">
           <span class="role-name">Provider</span><span class="role-desc">Clinician, lab, device</span>
@@ -162,6 +164,53 @@ function rolesPanel() {
           <span class="role-name">Recipient</span><span class="role-desc">Patient receiving care</span>
         </button>
       </div>
+    </section>`;
+}
+
+const backBtn = `
+        <button type="button" class="btn-back" id="back" aria-label="Back to roles">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Roles
+        </button>`;
+
+function lastSigned() {
+  const t = txs[txs.length - 1];
+  return `
+      <div class="last-signed" role="status">
+        <span class="pill pill-ok">Signed</span>
+        <span>Tx ${txs.length} · <strong>${esc(t.label || ROLE_LABEL[t.role])}</strong> · K${t.key.index}</span>
+        <span class="mono last-addr">${t.key.address}</span>
+        <button type="button" class="btn-link" id="to-provider">View on Provider page →</button>
+      </div>`;
+}
+
+function providerPanel() {
+  return `
+    <section class="provider" aria-labelledby="prov-h">
+      <div class="recip-head">${backBtn}<h1 id="prov-h" class="prov-title">Provider</h1></div>
+      <div class="grid">
+        <section class="txlist" aria-labelledby="tx-h">
+          <div class="section-head">
+            <h2 id="tx-h">BSV transactions</h2>
+            <span class="count">${txs.length}</span>
+          </div>
+          ${txs.map(txCard).reverse().join('')}
+        </section>
+
+        <aside class="chain" aria-labelledby="chain-h">
+          <h2 id="chain-h">Identity chain</h2>
+          <div class="root">
+            <span class="kp-label">Root private key (256-bit, from your first click)</span>
+            <span class="mono wrap reveal" tabindex="0" title="Hover or focus to reveal">${session.rootPrivHex}</span>
+          </div>
+          <ol class="chain-list">
+            ${keys.map((k) => `<li><span class="chain-i">K${k.index}</span><span class="mono" title="${k.address}">${short(k.address, 10, 6)}</span><span class="chain-role" title="${esc(txs[k.index].label || ROLE_LABEL[txs[k.index].role])}">${esc(txs[k.index].label || ROLE_LABEL[txs[k.index].role])}</span></li>`).join('')}
+          </ol>
+          <p class="chain-path mono">${ACCOUNT_PATH}/i' (hardened)</p>
+          <button type="button" class="btn-end" id="end">End session and discard keys</button>
+        </aside>
+      </div>
+      <p class="disclaimer">Demo only. Keys live in this tab's memory and disappear when you close it or end the session. Each transaction is really signed by its key, but it spends a placeholder 1-sat input, so it won't be accepted until it's re-signed against a real funding UTXO. Nothing is broadcast. Don't send coins to these addresses.</p>
     </section>`;
 }
 
@@ -180,13 +229,8 @@ function recipientPanel() {
       </div>`;
   return `
     <section class="recipient" aria-labelledby="recip-h">
-      <div class="recip-head">
-        <button type="button" class="btn-back" id="back" aria-label="Back to roles">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Roles
-        </button>
-        <h1 id="recip-h">Recipient</h1>
-      </div>
+      <div class="recip-head">${backBtn}<h1 id="recip-h">Recipient</h1></div>
+      ${lastSigned()}
       ${group('clinical')}
       ${group('healthcare')}
     </section>`;
@@ -199,32 +243,7 @@ function renderSession() {
     ${keyChip()}
   </header>
   <main class="session">
-    ${view === 'recipient' ? recipientPanel() : rolesPanel()}
-
-    <div class="grid">
-      <section class="txlist" aria-labelledby="tx-h">
-        <div class="section-head">
-          <h2 id="tx-h">BSV transactions</h2>
-          <span class="count">${txs.length}</span>
-        </div>
-        ${txs.map(txCard).reverse().join('')}
-      </section>
-
-      <aside class="chain" aria-labelledby="chain-h">
-        <h2 id="chain-h">Identity chain</h2>
-        <div class="root">
-          <span class="kp-label">Root private key (256-bit, from your first click)</span>
-          <span class="mono wrap reveal" tabindex="0" title="Hover or focus to reveal">${session.rootPrivHex}</span>
-        </div>
-        <ol class="chain-list">
-          ${keys.map((k) => `<li><span class="chain-i">K${k.index}</span><span class="mono" title="${k.address}">${short(k.address, 10, 6)}</span><span class="chain-role" title="${esc(txs[k.index].label || ROLE_LABEL[txs[k.index].role])}">${esc(txs[k.index].label || ROLE_LABEL[txs[k.index].role])}</span></li>`).join('')}
-        </ol>
-        <p class="chain-path mono">${ACCOUNT_PATH}/i' (hardened)</p>
-        <button type="button" class="btn-end" id="end">End session and discard keys</button>
-      </aside>
-    </div>
-
-    <p class="disclaimer">Demo only. Keys live in this tab's memory and disappear when you close it or end the session. Each transaction is really signed by its key, but it spends a placeholder 1-sat input, so it won't be accepted until it's re-signed against a real funding UTXO. Nothing is broadcast. Don't send coins to these addresses.</p>
+    ${view === 'recipient' ? recipientPanel() : view === 'provider' ? providerPanel() : rolesPanel()}
   </main>`;
 
   app.querySelectorAll('.btn-role').forEach((b) =>
@@ -232,7 +251,7 @@ function renderSession() {
       const role = b.dataset.role;
       app.querySelectorAll('.btn-role').forEach((x) => (x.disabled = true));
       await addEvent(role, role === 'provider' ? 'Provider' : 'Recipient');
-      if (role === 'recipient') view = 'recipient';
+      view = role;
       renderSession();
       app.querySelector('.tx')?.classList.add('tx-new');
     }));
@@ -247,6 +266,7 @@ function renderSession() {
   document.getElementById('back')?.addEventListener('click', () => {
     view = 'roles';
     renderSession();
+    window.scrollTo(0, 0);
   });
   app.querySelectorAll('.btn-copy').forEach((b) =>
     b.addEventListener('click', async () => {
@@ -254,7 +274,12 @@ function renderSession() {
       catch { b.textContent = 'Copy blocked'; }
       setTimeout(() => (b.textContent = 'Copy hex'), 1500);
     }));
-  document.getElementById('end').addEventListener('click', () => {
+  document.getElementById('to-provider')?.addEventListener('click', () => {
+    view = 'provider';
+    renderSession();
+    window.scrollTo(0, 0);
+  });
+  document.getElementById('end')?.addEventListener('click', () => {
     session = null; keys = []; txs = []; view = 'roles';
     renderWelcome();
   });

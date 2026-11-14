@@ -169,3 +169,14 @@ h2 { font-size: var(--text-lg); }
 }
 .chain-role { text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 8.5rem; }
 .chain-list li > .mono { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Provider page + last-signed status */
+.provider { display: grid; gap: var(--space-8); }
+.prov-title { font-size: var(--text-xl); letter-spacing: -.01em; color: var(--provider); }
+.last-signed { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-3) var(--space-4);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--text-sm); color: var(--ink-2); }
+.last-signed strong { color: var(--ink); font-weight: 600; }
+.last-addr { color: var(--ink-3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.btn-link { margin-left: auto; background: none; border: 0; padding: 0; color: var(--accent); font-weight: 500; font-size: var(--text-sm); }
+.btn-link:hover { text-decoration: underline; }
+.roles { gap: var(--space-5); }
+.recip-head h1.prov-title { color: var(--provider); }
