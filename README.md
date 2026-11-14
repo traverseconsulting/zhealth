@@ -21,7 +21,7 @@ If the spec and the whitepaper disagree, the whitepaper wins.
 docs/          whitepaper, technical spec, architecture decision records
 schemas/       JSON Schema (draft 2020-12) for protocol objects
 node/          zHealth node (Go): fee/halving, validation rules, Teranode clients
-client/        zHealth client (wallet + app) — not started
+client/web/    zHealth web client: welcome, HD key chain, OP_RETURN templates
 ```
 
 ## Node quick start
