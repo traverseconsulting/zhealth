@@ -4,6 +4,9 @@ import { buildTx, keyInfo, PLACEHOLDER_SATS } from './tx.js';
 
 const app = document.getElementById('app');
 const WELCOME_TEXT = 'Welcome to the Zhealth';
+// Demo reward a provider earns for fulfilling a recipient's service contract.
+// Real amounts and escrow are not decided yet.
+const REWARD_SATS = 100;
 
 // Recipient page: direct patient care services. Each one is an event
 // microservice; its spec 5.2 event type is recorded on the transaction card.
@@ -80,11 +83,12 @@ const findService = (id) => {
   return null;
 };
 
-const ROLE_LABEL = { welcome: 'Welcome', provider: 'Provider', recipient: 'Recipient' };
+const ROLE_LABEL = { welcome: 'Welcome', provider: 'Provider', recipient: 'Recipient', fulfil: 'Fulfilment' };
 let view = 'roles';   // 'roles' | 'recipient' | 'provider'
 let session = null;   // HD session (in memory only)
 let keys = [];        // derived keys, in order
-let txs = [];         // { role, key, tpl }
+let txs = [];
+let contracts = []; // { id, svc, req, reqN, status: 'open'|'fulfilled', ful, fulN, reward }         // { role, key, tpl }
 
 const short = (h, a = 10, b = 8) => `${h.slice(0, a)}…${h.slice(-b)}`;
 const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -96,8 +100,11 @@ async function addEvent(role, text, extra = {}) {
   key.address = info.address;
   key.wif = info.wif;
   keys.push(key);
-  txs.push({ role, key, ...extra, tpl: await buildTx(text, key.privHex) });
+  const t = { role, key, ...extra, tpl: await buildTx(text, key.privHex) };
+  txs.push(t);
+  return t;
 }
+const contractById = (id) => contracts.find((c) => c.id === id);
 
 /* ---------- Page 1: Welcome ---------- */
 function renderWelcome() {
@@ -113,7 +120,7 @@ function renderWelcome() {
   </main>`;
   document.getElementById('welcome').addEventListener('click', async () => {
     session = newSession();
-    keys = []; txs = [];
+    keys = []; txs = []; contracts = [];
     await addEvent('welcome', WELCOME_TEXT);
     view = 'roles';
     renderSession();
@@ -148,6 +155,8 @@ function txCard(t, n) {
         <span class="tx-num">Tx ${n + 1}</span>
         <span class="pill pill-${t.role}"${t.group ? ` style="background:${SERVICES[t.group].soft};color:${SERVICES[t.group].color}"` : ''}>${esc(label)}</span>
         ${t.type ? `<span class="pill pill-type mono">${t.type}</span>` : ''}
+        ${t.role === 'service' && t.contractId ? `<span class="pill pill-contract">Contract #${t.contractId} · ${contractById(t.contractId).status}</span>` : ''}
+        ${t.role === 'fulfil' ? `<span class="pill pill-provider">Fulfils contract #${t.contractId} · +${REWARD_SATS} sat</span>` : ''}
         <span class="pill ${x.verified ? 'pill-ok' : 'pill-bad'}">${x.verified ? 'Signature valid' : 'Signature invalid'}</span>
       </div>
       <span class="tx-meta mono">K${t.key.index} · ${t.key.path}</span>
@@ -197,6 +206,7 @@ function rolesPanel() {
       <div class="role-buttons">
         <button type="button" class="btn-role" data-role="provider">
           <span class="role-name">Provider</span><span class="role-desc">Clinician, lab, device</span>
+          ${contracts.some((c) => c.status === 'open') ? `<span class="role-badge">${contracts.filter((c) => c.status === 'open').length} open contracts</span>` : ''}
         </button>
         <button type="button" class="btn-role" data-role="recipient">
           <span class="role-name">Recipient</span><span class="role-desc">Patient receiving care</span>
@@ -218,14 +228,58 @@ function lastSigned() {
         <span class="pill pill-ok">Signed</span>
         <span>Tx ${txs.length} · <strong>${esc(t.label || ROLE_LABEL[t.role])}</strong> · K${t.key.index}</span>
         <span class="mono last-addr">${t.key.address}</span>
+        ${t.role === 'service' && t.contractId ? `<span class="pill pill-contract">Contract #${t.contractId} posted for providers</span>` : ''}
         <button type="button" class="btn-link" id="to-provider">View on Provider page →</button>
       </div>`;
+}
+
+function contractsPanel() {
+  const open = contracts.filter((c) => c.status === 'open');
+  const done = contracts.filter((c) => c.status === 'fulfilled');
+  const earned = done.reduce((a, c) => a + c.reward, 0);
+  const card = (c) => {
+    const g = SERVICES[c.svc.group];
+    return `
+        <li class="contract ${c.status}" style="--g:${g.color};--g-soft:${g.soft}">
+          <div class="contract-main">
+            <div class="contract-top">
+              <span class="contract-id">#${c.id}</span>
+              <span class="contract-name">${esc(c.svc.label)}</span>
+              <span class="pill pill-type mono">${c.svc.type}</span>
+            </div>
+            <div class="contract-meta">
+              <span>Requested in Tx ${c.reqN} · K${c.req.key.index}</span>
+              <span class="mono" title="${c.req.tpl.txid}">${short(c.req.tpl.txid, 8, 6)}</span>
+            </div>
+          </div>
+          <div class="contract-side">
+            <span class="reward">${c.reward} sat</span>
+            ${c.status === 'open'
+              ? `<button type="button" class="btn-submit" data-contract="${c.id}">Submit service</button>`
+              : `<span class="fulfilled">Fulfilled in Tx ${c.fulN} · K${c.ful.key.index}</span>`}
+          </div>
+        </li>`;
+  };
+  return `
+      <section class="contracts" aria-labelledby="ct-h">
+        <div class="section-head">
+          <h2 id="ct-h">Service contracts</h2>
+          <span class="count">${open.length} open</span>
+          <span class="count">${done.length} fulfilled</span>
+          <span class="count count-earned">${earned} sat earned</span>
+        </div>
+        ${contracts.length
+          ? `<ol class="contract-list">${[...open, ...done].map(card).join('')}</ol>`
+          : `<p class="empty">No contracts yet. Each service a recipient requests shows up here for providers to fulfil.</p>`}
+        <p class="disclaimer">Rewards are demo amounts. Real payouts need escrow and funded inputs.</p>
+      </section>`;
 }
 
 function providerPanel() {
   return `
     <section class="provider" aria-labelledby="prov-h">
       <div class="recip-head">${backBtn}<h1 id="prov-h" class="prov-title">Provider</h1></div>
+      ${contractsPanel()}
       <div class="grid">
         <section class="txlist" aria-labelledby="tx-h">
           <div class="section-head">
@@ -295,9 +349,21 @@ function renderSession() {
     b.addEventListener('click', async () => {
       const svc = findService(b.dataset.svc);
       app.querySelectorAll('.btn-svc').forEach((x) => (x.disabled = true));
-      await addEvent('service', svc.label, { label: svc.label, type: svc.type, group: svc.group });
+      const id = contracts.length + 1;
+      const req = await addEvent('service', svc.label, { label: svc.label, type: svc.type, group: svc.group, contractId: id });
+      contracts.push({ id, svc, req, reqN: txs.length, status: 'open', reward: REWARD_SATS });
       renderSession();
       app.querySelector('.tx')?.classList.add('tx-new');
+    }));
+  app.querySelectorAll('.btn-submit').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const c = contractById(Number(b.dataset.contract));
+      app.querySelectorAll('.btn-submit').forEach((x) => (x.disabled = true));
+      const text = `${c.svc.label} completed`;
+      c.ful = await addEvent('fulfil', text, { label: text, type: c.svc.type, contractId: c.id });
+      c.fulN = txs.length;
+      c.status = 'fulfilled';
+      renderSession();
     }));
   document.getElementById('back')?.addEventListener('click', () => {
     view = 'roles';
@@ -316,7 +382,7 @@ function renderSession() {
     window.scrollTo(0, 0);
   });
   document.getElementById('end')?.addEventListener('click', () => {
-    session = null; keys = []; txs = []; view = 'roles';
+    session = null; keys = []; txs = []; contracts = []; view = 'roles';
     renderWelcome();
   });
 }
