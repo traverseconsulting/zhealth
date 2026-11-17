@@ -12,6 +12,7 @@ import type { Knex } from 'knex'
 import type { LookupService, LookupFormula, OutputAdmittedByTopic, OutputSpent } from '@bsv/overlay'
 import { TOPIC, LOOKUP_SERVICE, KINDS, serviceBySlug, decodeRecord } from './protocol.js'
 import { ZHealthStorage, migrations } from './storage.js'
+import { validateLookupQuery } from './lookup-validation.js'
 
 export interface ZHealthQuery {
   /** Record kind. Omit to search all kinds. */
@@ -56,8 +57,7 @@ export class ZHealthLookupService implements LookupService {
 
   async lookup (question: LookupQuestion): Promise<LookupFormula> {
     if (question.service !== LOOKUP_SERVICE) throw new Error(`lookup service ${LOOKUP_SERVICE} cannot answer ${question.service}`)
-    const q = (question.query ?? {}) as ZHealthQuery
-    if (typeof q !== 'object') throw new Error('query must be an object')
+    const q = validateLookupQuery(question.query ?? {})
 
     let b = this.storage.query()
     if (q.kind != null) {
