@@ -268,8 +268,8 @@ function providerComplaintsPanel() {
     <p class="concern-status">Complaints saved on this device as COMPLAINTS_LIST · BSV transactions awaiting broadcast.</p>
     ${concerns.length ? concerns.map(c => `<article class="concern-card">
       <div class="concern-body"><p class="concern-text">${esc(c.complaint)}</p>
-      <span class="concern-status">${c.status === 'open' ? 'Open · Awaiting provider' : c.status === 'consulted' ? 'Consulted · Referral decision pending' : 'Consultation completed'}</span>
-      <span class="concern-status mono">Tx ${short(c.txid, 10, 8)}</span><span class="concern-status">100 sats · 50 consultation / 50 referral or refund</span></div>
+      <span class="concern-status">${c.status === 'open' ? 'Open · Awaiting provider' : c.status === 'consulted' ? 'Consulted · Additional care decision pending' : c.status === 'additional-care-reserved' ? 'Additional care reserved' : 'Consultation completed'}</span>
+      <span class="concern-status mono">Tx ${short(c.txid, 10, 8)}</span><span class="concern-status">100 sats · 50 consultation / 50 additional care or refund</span></div>
       <div class="concern-actions"><button type="button" class="btn-role" data-open-provider-tx="${c.txid}">Open complaint · 100 sats</button></div>
     </article>`).join('') : '<p class="empty">No active concerns found in this browser session.</p>'}
   </section>`;
@@ -491,12 +491,15 @@ function providerPanel() {
         <p><strong>ECDH handshake:</strong> ${currentComplaint.handshake?.verified === true ? 'Both sides verified' : 'Provider shared secret derived; patient-side confirmation pending'}</p>
         <p><strong>100 sats escrow:</strong> Demo reserved only — not funded or locked on BSV</p>` : ''}
         <p><strong>50 sats</strong> · Call / text consultation</p>
-        <p><strong>50 sats</strong> · Referral reserve, or return to patient if unused</p>
+        <p><strong>50 sats</strong> · Reserved for additional care (vitals, blood checks, lab tests, or other services). Refund to the patient if unused.</p>
         ${currentComplaint.status === 'open' ? `<button type="button" class="btn-submit" id="complete-complaint">Complete call / text · 50 sats</button>` : ''}
         ${currentComplaint.status === 'consulted' ? `<p>Consultation completed · 50 sats assigned to provider</p>
-          <button type="button" class="btn-submit" id="refer-complaint">Referral needed · allocate 50 sats</button>
-          <button type="button" class="btn-back" id="refund-complaint">No referral · return 50 sats to patient</button>` : ''}
-        ${currentComplaint.status === 'fulfilled' ? `<p>Completed · ${allocation?.referral === 'refund' ? '50 sats returned to patient' : '50 sats reserved for referral'}</p>` : ''}
+          <label for="additional-service">Additional service required</label>
+          <select id="additional-service"><option value="vitals">Vitals check</option><option value="blood">Blood check / sample</option><option value="labs">Lab tests</option><option value="referral">Referral</option><option value="other">Other care service</option></select>
+          <button type="button" class="btn-submit" id="refer-complaint">Reserve 50 sats for selected service</button>
+          <button type="button" class="btn-back" id="refund-complaint">No additional service · return 50 sats to patient</button>` : ''}
+        ${currentComplaint.status === 'additional-care-reserved' ? `<p>50 sats reserved for ${esc(allocation?.additionalService || 'additional care')} · awaiting service completion</p>` : ''}
+        ${currentComplaint.status === 'fulfilled' ? `<p>Completed · ${allocation?.additionalService === 'refund' ? '50 sats refund prepared for patient' : `50 sats reserved for ${esc(allocation?.additionalService || 'additional care')}`}</p>` : ''}
         <p class="concern-status">Local BSV-format demonstration only. No real satoshis are funded, locked, or transferred.</p>
       </section>` : ''}
       ${devicesPanel()}
@@ -678,12 +681,12 @@ function renderSession() {
     try {
       const concern = contractById(selectedConcernId);
       if (!concern || concern.status !== 'open') return;
-      const providerKey = deriveKey();
+      const providerKey = concern.providerPrivateKey ? { privHex: concern.providerPrivateKey, pubHex: concern.providerPublicKey, address: concern.providerAddress } : deriveKey();
       const fulfil = await addEvent('fulfil', 'Call/text consultation · 50 sats allocated', { label: 'Call/text consultation', contractId: concern.id }, { key: providerKey });
       concern.ful = fulfil; concern.fulN = txs.length;
       concern.providerAddress = providerKey.address;
       concern.providerPrivateKey = providerKey.privHex;
-      concern.allocation = { consultation: 50, referral: 'reserved', referralSats: 50 };
+      concern.allocation = { consultation: 50, additionalService: 'reserved', additionalServiceSats: 50 };
       concern.status = 'consulted'; concern.doctorPaidSats = 50; concern.escrowSats = 50;
       const saved = readComplaintsList();
       const item = saved.find(item => item.txid === concern.req.tpl.txid);
@@ -697,12 +700,13 @@ function renderSession() {
       try {
         const concern = contractById(selectedConcernId);
         if (!concern || concern.status !== 'consulted') return;
-        const description = outcome === 'refund' ? 'Unused referral reserve: return 50 sats to patient' : 'Referral needed: allocate 50 sats';
+        const service = outcome === 'refund' ? null : document.getElementById('additional-service')?.value || 'other';
+        const description = outcome === 'refund' ? 'Unused care reserve: prepare 50 sat refund to patient' : 'Reserve 50 sats for additional care: ' + service;
         const recipient = outcome === 'refund' ? concern.req.key.address : null;
         const transaction = await addEvent('fulfil', description, { label: description, contractId: concern.id }, recipient ? { payTo: recipient } : {});
         concern.referralTx = transaction;
-        concern.allocation.referral = outcome;
-        concern.status = 'fulfilled'; concern.escrowSats = 0;
+        concern.allocation.additionalService = outcome === 'refund' ? 'refund' : service;
+        concern.status = outcome === 'refund' ? 'fulfilled' : 'additional-care-reserved'; concern.escrowSats = outcome === 'refund' ? 0 : 50;
         const saved = readComplaintsList();
         const item = saved.find(item => item.txid === concern.req.tpl.txid);
         if (item) { item.status = 'fulfilled'; item.allocation = concern.allocation; item.referralTxid = transaction.tpl.txid; localStorage.setItem(COMPLAINTS_LIST, JSON.stringify(saved)); }
