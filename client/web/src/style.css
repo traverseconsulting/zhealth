@@ -316,3 +316,14 @@ h2 { font-size: var(--text-lg); }
 .keychip-copy .keypop { display: none; }
 .keychip-copy:hover .keypop, .keychip-copy:focus-visible .keypop { display: block; }
 .keychip-copy .keypop .kp-label { display: block; }
+
+/* Patient/provider entry selection */
+.entry-choice { max-width: 740px; margin: clamp(3rem, 10vh, 8rem) auto; text-align: center; padding: 1rem; }
+.entry-choice h1 { color: var(--accent); font-size: clamp(2rem, 4vw, 3rem); }
+.entry-choice > p { color: var(--ink-2); margin: 1rem 0 2rem; }
+.entry-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.entry-option { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 2.5rem 1.5rem; display: grid; gap: .65rem; text-align: left; box-shadow: var(--shadow); }
+.entry-option:hover { border-color: var(--accent); background: var(--accent-soft); }
+.entry-option strong { font-size: 1.5rem; color: var(--accent); }
+.entry-option span { color: var(--ink-2); font-size: var(--text-sm); }
+@media (max-width: 540px) { .entry-options { grid-template-columns: 1fr; } }
