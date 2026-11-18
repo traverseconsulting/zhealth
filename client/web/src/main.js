@@ -249,8 +249,8 @@ function providerComplaintsPanel() {
     ${concerns.length ? concerns.map(c => `<article class="concern-card">
       <div class="concern-body"><p class="concern-text">${esc(c.complaint)}</p>
       <span class="concern-status">${c.status === 'open' ? 'Open · Awaiting provider' : 'Consultation completed'}</span>
-      <span class="concern-status mono">Tx ${short(c.req.tpl.txid, 10, 8)}</span></div>
-      <div class="concern-actions"><button type="button" class="btn-role" data-open-provider="${c.id}">Open complaint</button></div>
+      <span class="concern-status mono">Tx ${short(c.req.tpl.txid, 10, 8)}</span><span class="concern-status">100 sats · ${c.status === "open" ? "Demo locked" : "Demo released"}</span></div>
+      <div class="concern-actions"><button type="button" class="btn-role" data-open-provider="${c.id}">Open complaint · 100 sats</button></div>
     </article>`).join('') : '<p class="empty">No complaints available in this browser session yet.</p>'}
   </section>`;
 }
@@ -452,9 +452,11 @@ function contractsPanel() {
 }
 
 function providerPanel() {
+  const currentComplaint = contractById(selectedConcernId);
   return `
     <section class="provider" aria-labelledby="prov-h">
       <div class="recip-head">${backBtn}<h1 id="prov-h" class="prov-title">Provider</h1></div>
+      ${currentComplaint?.initial ? `<section class="contracts"><h2>Complaint service · 100 sats</h2><p>${esc(currentComplaint.complaint)}</p>${currentComplaint.status === 'open' ? '<button type="button" class="btn-submit" id="complete-complaint">Render service · release 100 sats</button>' : `<p>Service rendered · 100 sats demo assigned to ${esc(currentComplaint.providerAddress || 'provider')}</p>`}<p class="concern-status">Demo only: no real BSV is locked or transferred.</p></section>` : ''}
       ${devicesPanel()}
       ${contractsPanel()}
     </section>`;
@@ -525,7 +527,7 @@ function renderSession() {
       const svc = findService('consultation');
       const id = contracts.length + 1;
       const req = await addEvent('service', complaint, { label: 'Initial consultation', type: svc.type, group: svc.group, contractId: id, sid: svc.sid }, { extra: [svc.sid] });
-      contracts.push({ id, svc, req, reqN: txs.length, status: 'open', reward: ONE_BSV_SATS, escrowSats: ONE_BSV_SATS, initial: true, complaint });
+      contracts.push({ id, svc, req, reqN: txs.length, status: 'open', reward: REWARD_SATS, escrowSats: REWARD_SATS, initial: true, complaint });
       complaintSubmitted = true;
       selectedConcernId = id;
       view = 'roles';
@@ -574,6 +576,21 @@ function renderSession() {
     }
     renderSession();
   }
+  document.getElementById('complete-complaint')?.addEventListener('click', async (event) => {
+    event.currentTarget.disabled = true;
+    try {
+      const concern = contractById(selectedConcernId);
+      if (!concern || concern.status !== 'open') return;
+      const providerKey = deriveKey();
+      const fulfil = await addEvent('fulfil', 'Service rendered', { label: 'Service rendered', contractId: concern.id }, { key: providerKey });
+      concern.ful = fulfil; concern.fulN = txs.length;
+      concern.providerAddress = providerKey.address;
+      concern.providerPrivateKey = providerKey.privHex;
+      concern.status = 'fulfilled'; concern.doctorPaidSats = REWARD_SATS; concern.escrowSats = 0;
+      renderSession();
+      alert('Service rendered. 100 sat demo allocation assigned to the new provider address. Copy its private key from the top right. No real funds transferred.');
+    } catch (error) { alert(error.message); renderSession(); }
+  });
   app.querySelectorAll('[data-consult-complete]').forEach(b => b.addEventListener('click', async () => { b.disabled = true; await resolveConsultation(Number(b.dataset.consultComplete), false); }));
   app.querySelectorAll('[data-consult-refer]').forEach(b => b.addEventListener('click', async () => { b.disabled = true; await resolveConsultation(Number(b.dataset.consultRefer), true); }));
   const on = (id, fn) => document.getElementById(id)?.addEventListener('click', fn);
