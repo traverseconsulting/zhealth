@@ -144,8 +144,8 @@ function keyChip() {
   const k = keys[keys.length - 1];
   if (!k) return '';
   return `
-  <button type="button" class="keychip keychip-copy" id="copy-key" title="Hover to view private key; click to copy" aria-label="BSV public key ${k.pubHex}. Hover to view private key; click to copy private key.">
-    <span class="mono wrap">${k.pubHex}</span>
+  <button type="button" class="keychip keychip-copy" id="copy-key" title="Hover to view private key; click to copy" aria-label="Current BSV address ${k.address}. Hover to view private key; click to copy private key.">
+    <span class="keychip-label">Current BSV Address</span><span class="mono">${k.address}</span>
     <span class="keypop" role="tooltip"><span class="kp-label">Private key</span><span class="mono wrap">${k.privHex}</span></span>
   </button>`;
 }
