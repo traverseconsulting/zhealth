@@ -297,3 +297,16 @@ h2 { font-size: var(--text-lg); }
 
 /* zHealth brand color for the patient intake heading. */
 .intake h1 { color: var(--accent); }
+
+/* Active concern dashboard */
+.session:has(> .concerns) { padding-top: var(--space-6); }
+.concerns { width: 100%; display: grid; gap: var(--space-5); }
+.concerns-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
+.concerns-head h1 { color: var(--accent); font-size: var(--text-xl); }
+.concern-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-6); align-items: center; padding: var(--space-5); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+.concern-body { display: grid; gap: var(--space-2); min-width: 0; }
+.concern-text { margin: 0; font-size: var(--text-lg); overflow-wrap: anywhere; }
+.concern-status { color: var(--ink-3); font-size: var(--text-xs); }
+.concern-actions { display: grid; grid-template-columns: repeat(2, minmax(8rem, 1fr)); gap: var(--space-3); }
+.concern-actions .btn-role { min-height: 5.5rem; text-align: center; justify-items: center; align-content: center; padding: var(--space-3); }
+@media (max-width: 720px) { .concern-card { grid-template-columns: 1fr; } .concern-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
