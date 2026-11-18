@@ -277,7 +277,6 @@ function providerComplaintsPanel() {
 function intakePanel() {
   return `<section class="intake" aria-labelledby="intake-title">
     <h1 id="intake-title">What brings you in today?</h1>
-    ${txs.some(t => t.role === 'patient') ? '<p class="concern-status">Patient OP_RETURN transaction created locally · Not broadcast to BSV</p>' : ''}
     <form id="intake-form">
       <textarea id="complaint" name="complaint" rows="6" maxlength="2000" required aria-label="Describe your symptoms or concerns" placeholder="Describe your symptoms or concerns"></textarea>
       <button class="btn-submit" type="submit">Get Help</button>
