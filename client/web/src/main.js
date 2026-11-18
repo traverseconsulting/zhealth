@@ -220,7 +220,6 @@ function txCard(t, n) {
 function rolesPanel() {
   return `
     <section class="roles" aria-label="Choose a role">
-      ${lastSigned()}
       <div class="role-buttons">
         <button type="button" class="btn-role" data-role="provider">
           <span class="role-name">Provider</span><span class="role-desc">Clinician, lab, device</span>
@@ -459,7 +458,6 @@ function recipientPanel() {
   return `
     <section class="recipient" aria-labelledby="recip-h">
       <div class="recip-head">${backBtn}<h1 id="recip-h">Recipient</h1></div>
-      ${lastSigned()}
       ${Object.keys(SERVICES).map(group).join('')}
     </section>`;
 }
@@ -566,11 +564,6 @@ function renderSession() {
       catch { b.textContent = 'Copy blocked'; }
       setTimeout(() => (b.textContent = 'Copy hex'), 1500);
     }));
-  document.getElementById('to-provider')?.addEventListener('click', () => {
-    view = 'provider';
-    renderSession();
-    window.scrollTo(0, 0);
-  });
   document.getElementById('end')?.addEventListener('click', () => {
     session = null; keys = []; txs = []; contracts = []; visit = null; view = 'roles';
     renderWelcome();
