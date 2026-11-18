@@ -410,31 +410,7 @@ function providerPanel() {
     <section class="provider" aria-labelledby="prov-h">
       <div class="recip-head">${backBtn}<h1 id="prov-h" class="prov-title">Provider</h1></div>
       ${devicesPanel()}
-      ${visitPanel()}
       ${contractsPanel()}
-      <div class="grid">
-        <section class="txlist" aria-labelledby="tx-h">
-          <div class="section-head">
-            <h2 id="tx-h">BSV transactions</h2>
-            <span class="count">${txs.length}</span>
-          </div>
-          ${txs.map(txCard).reverse().join('')}
-        </section>
-
-        <aside class="chain" aria-labelledby="chain-h">
-          <h2 id="chain-h">Identity chain</h2>
-          <div class="root">
-            <span class="kp-label">Root private key (256-bit, from your first click)</span>
-            <span class="mono wrap reveal" tabindex="0" title="Hover or focus to reveal">${session.rootPrivHex}</span>
-          </div>
-          <ol class="chain-list">
-            ${keys.map((k) => { const t = txs.find((x) => x.key === k); return `<li><span class="chain-i">K${k.index}</span><span class="mono" title="${k.address}">${short(k.address, 10, 6)}</span><span class="chain-role" title="${esc(t.label || ROLE_LABEL[t.role])}">${esc(t.label || ROLE_LABEL[t.role])}</span></li>`; }).join('')}
-          </ol>
-          <p class="chain-path mono">${ACCOUNT_PATH}/i' (hardened)</p>
-          <button type="button" class="btn-end" id="end">End session and discard keys</button>
-        </aside>
-      </div>
-      <p class="disclaimer">Demo only. Keys live in this tab's memory and disappear when you close it or end the session. Each transaction is really signed by its key, but it spends a placeholder 1-sat input, so it won't be accepted until it's re-signed against a real funding UTXO. Nothing is broadcast. Don't send coins to these addresses.</p>
     </section>`;
 }
 
