@@ -45,11 +45,21 @@ export function appendHealthEvent({ type, publicKey, txid, text }) {
 
 export function getJournal() { return load(); }
 
+// Transaction IDs are displayed as big-endian hex; serialize each as 32 bytes
+// in little-endian order, preserving the order in which events were appended.
+function txidToLittleEndian(txid) {
+  if (!/^[0-9a-fA-F]{64}$/.test(txid)) throw new Error('Invalid 32-byte transaction ID');
+  const bytes = new Uint8Array(32);
+  for (let i = 0; i < 32; i++) bytes[i] = parseInt(txid.slice((31 - i) * 2, (32 - i) * 2), 16);
+  return bytes;
+}
+
 export function exportHealthBlocks() {
   const journal = load();
   if (!journal) throw new Error('No journal found');
-  // Export only transaction IDs, newest first. The internal journal remains append-only.
-  const blob = new Blob([journal.events.map(e => e.txid).reverse().join('\n') + (journal.events.length ? '\n' : '')], { type: 'application/octet-stream' });
+  const data = new Uint8Array(journal.events.length * 32);
+  journal.events.forEach((event, index) => data.set(txidToLittleEndian(event.txid), index * 32));
+  const blob = new Blob([data], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
