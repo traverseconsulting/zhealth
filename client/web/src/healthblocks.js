@@ -48,7 +48,7 @@ export function getJournal() { return load(); }
 export function exportHealthBlocks() {
   const journal = load();
   if (!journal) throw new Error('No journal found');
-  const blob = new Blob([journal.events.map(e => canonical(e)).join('\\n') + '\\n'], { type: 'application/octet-stream' });
+  const blob = new Blob([journal.events.map(e => canonical(e)).join('\n') + '\n'], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
