@@ -50,7 +50,7 @@ export async function fetchChainStatus ({ txid, network = 'test', fetchImpl = fe
 export async function verifyMining ({ txid, network = 'test', verifier, fetchImpl = fetch }) {
   const status = await fetchChainStatus({ txid, network, fetchImpl })
   if (status.status !== 'reported_mined') return { status: 'pending' }
-  if (typeof verifier !== 'function') return { status: 'awaiting_proof_verification', ...status }
+  if (typeof verifier !== 'function') return { ...status, status: 'awaiting_proof_verification' }
   const verified = await verifier({ txid, blockHash: status.blockHash, network })
-  return verified === true ? { status: 'verified_mined', ...status } : { status: 'awaiting_proof_verification', ...status }
+  return verified === true ? { ...status, status: 'verified_mined' } : { ...status, status: 'awaiting_proof_verification' }
 }
