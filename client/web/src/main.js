@@ -217,7 +217,7 @@ function intakePanel() {
     <form id="intake-form">
       <label for="complaint">Describe your symptoms or concerns</label>
       <textarea id="complaint" name="complaint" rows="6" maxlength="2000" required placeholder="How can we help you today?"></textarea>
-      <button class="btn-submit" type="submit">Submit request · 1 BSV demo contract</button>
+      <button class="btn-submit" type="submit">Get Help</button>
     </form>
   </section>`;
 }
