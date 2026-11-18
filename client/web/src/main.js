@@ -223,7 +223,6 @@ function rolesPanel() {
   return `
     <section class="concerns" aria-label="Patient concerns">
       <div class="concerns-head"><h1>Active concerns</h1><div><button type="button" class="btn-back" id="export-healthblocks">Export hblk00000.dat</button> <button type="button" class="btn-back" id="new-concern">+ New concern</button></div></div>
-      <p class="concern-status">Local hash-linked journal: ${getJournal()?.events.length || 0} events. Contains hashes and public metadata, not complaint text. Not published to BSV or a public server.</p>
       ${concerns.length ? concerns.map(c => `
         <article class="concern-card">
           <div class="concern-body">
