@@ -327,3 +327,9 @@ h2 { font-size: var(--text-lg); }
 .entry-option strong { font-size: 1.5rem; color: var(--accent); }
 .entry-option span { color: var(--ink-2); font-size: var(--text-sm); }
 @media (max-width: 540px) { .entry-options { grid-template-columns: 1fr; } }
+
+/* Equal-width, larger landing page choices */
+.entry-choice { max-width: 1000px; width: 100%; }
+.entry-options { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+.entry-option { width: 100%; min-height: 190px; display: flex; align-items: center; justify-content: center; text-align: center; }
+@media (max-width: 540px) { .entry-options { grid-template-columns: 1fr; } .entry-option { min-height: 145px; } }
