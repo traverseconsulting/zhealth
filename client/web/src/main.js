@@ -138,6 +138,7 @@ async function startSession() {
 /* ---------- Page 2: Session ---------- */
 function keyChip() {
   const k = keys[keys.length - 1];
+  if (!k) return '';
   return `
   <div class="keychip" tabindex="0" aria-describedby="keypop" aria-label="Latest BSV address for K${k.index}. Hover or focus to reveal the private key.">
     <span class="keychip-tag">K${k.index}</span>
