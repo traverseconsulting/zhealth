@@ -1,4 +1,5 @@
 import './style.css';
+import { initializeJournal, appendHealthEvent, getJournal, exportHealthBlocks } from './healthblocks.js';
 import { newSession, ACCOUNT_PATH } from './chain.js';
 import { buildTx, keyInfo, PLACEHOLDER_SATS, CLOSE_SATS } from './tx.js';
 import { serviceId, createRegistry, devicesFor, signReading, validateReading, unregisteredDevice } from './devices.js';
@@ -122,6 +123,7 @@ async function addEvent(role, text, extra = {}, opts = {}) {
   keys.push(key);
   const t = { role, key, ...extra, tpl: await buildTx(text, key.privHex, opts.payTo || null, opts.extra || []) };
   txs.push(t);
+  appendHealthEvent({ type: role, publicKey: key.pubHex, txid: t.tpl.txid, text });
   return t;
 }
 const contractById = (id) => contracts.find((c) => c.id === id);
@@ -129,6 +131,7 @@ const contractById = (id) => contracts.find((c) => c.id === id);
 /* ---------- Page 1: Welcome ---------- */
 async function startSession() {
   session = newSession();
+  initializeJournal(session.rootPubHex);
   keys = []; txs = []; contracts = []; visit = null;
   complaintSubmitted = false;
   registry = await createRegistry();
@@ -226,7 +229,8 @@ function rolesPanel() {
   const concerns = contracts.filter(c => c.initial);
   return `
     <section class="concerns" aria-label="Patient concerns">
-      <div class="concerns-head"><h1>Active concerns</h1><button type="button" class="btn-back" id="new-concern">+ New concern</button></div>
+      <div class="concerns-head"><h1>Active concerns</h1><div><button type="button" class="btn-back" id="export-healthblocks">Export hblk00000.dat</button> <button type="button" class="btn-back" id="new-concern">+ New concern</button></div></div>
+      <p class="concern-status">Local hash-linked journal: ${getJournal()?.events.length || 0} events. Contains hashes and public metadata, not complaint text. Not published to BSV or a public server.</p>
       ${concerns.length ? concerns.map(c => `
         <article class="concern-card">
           <div class="concern-body">
@@ -495,6 +499,7 @@ function renderSession() {
       alert('Unable to prepare the demonstration transaction: ' + error.message);
     }
   });
+  document.getElementById('export-healthblocks')?.addEventListener('click', exportHealthBlocks);
   document.getElementById('new-concern')?.addEventListener('click', () => { view = 'intake'; renderSession(); });
   app.querySelectorAll('[data-concern-role]').forEach((b) =>
     b.addEventListener('click', async () => {
