@@ -6,11 +6,11 @@ import { matchCode, closeAddressForPatient, closeKeyForPatient, randomPeerKey } 
 
 const app = document.getElementById('app');
 const WELCOME_TEXT = 'Welcome to the Zhealth';
-// Demo reward a provider earns for fulfilling a recipient's service contract.
+// Demo reward a provider earns for fulfilling a patient's service contract.
 // Real amounts and escrow are not decided yet.
 const REWARD_SATS = 100;
 
-// Recipient page: direct patient care services. Each one is an event
+// Patient page: direct patient care services. Each one is an event
 // microservice; its spec 5.2 event type is recorded on the transaction card.
 const SERVICES = {
   vitals: {
@@ -89,7 +89,7 @@ const findService = (id) => {
   return null;
 };
 
-const ROLE_LABEL = { welcome: 'Welcome', provider: 'Provider', recipient: 'Recipient', fulfil: 'Fulfilment' };
+const ROLE_LABEL = { welcome: 'Welcome', provider: 'Provider', recipient: 'Patient', fulfil: 'Fulfilment' };
 let view = 'roles';   // 'roles' | 'recipient' | 'provider'
 let session = null;   // HD session (in memory only)
 let keys = [];        // derived keys, in order
@@ -226,7 +226,7 @@ function rolesPanel() {
           ${contracts.some((c) => c.status === 'open') ? `<span class="role-badge">${contracts.filter((c) => c.status === 'open').length} open contracts</span>` : ''}
         </button>
         <button type="button" class="btn-role" data-role="recipient">
-          <span class="role-name">Recipient</span><span class="role-desc">Patient receiving care</span>
+          <span class="role-name">Patient</span><span class="role-desc">Patient receiving care</span>
         </button>
       </div>
     </section>`;
@@ -255,7 +255,7 @@ function visitPanel() {
         <p class="visit-lede">The patient walks in. The doctor finds the patient's contract among all open ones, posts the result and closes it, and neither the patient's key nor the request transaction appears in the result.</p>
         ${own.length
           ? `<button type="button" class="btn-submit" id="v-start">Start visit</button>`
-          : `<p class="empty">Request a service on the Recipient page first. That's the patient's contract.</p>`}
+          : `<p class="empty">Request a service on the Patient page first. That's the patient's contract.</p>`}
       </section>`;
   }
   const c = v.matchedId ? contractById(v.matchedId) : null;
@@ -390,7 +390,7 @@ function contractsPanel() {
         </div>
         ${contracts.length
           ? `<ol class="contract-list">${[...open, ...done].map(card).join('')}</ol>`
-          : `<p class="empty">No contracts yet. Each service a recipient requests shows up here for providers to fulfil.</p>`}
+          : `<p class="empty">No contracts yet. Each service a patient requests shows up here for providers to fulfil.</p>`}
         <button type="button" class="btn-ghost" id="add-peers">Add 4 requests from other peers</button>
         <p class="disclaimer">Rewards are demo amounts. Real payouts need escrow and funded inputs.</p>
       </section>`;
@@ -444,7 +444,7 @@ function recipientPanel() {
       </div>`;
   return `
     <section class="recipient" aria-labelledby="recip-h">
-      <div class="recip-head">${backBtn}<h1 id="recip-h">Recipient</h1></div>
+      <div class="recip-head">${backBtn}<h1 id="recip-h">Patient</h1></div>
       ${Object.keys(SERVICES).map(group).join('')}
     </section>`;
 }
@@ -463,7 +463,7 @@ function renderSession() {
     b.addEventListener('click', async () => {
       const role = b.dataset.role;
       app.querySelectorAll('.btn-role').forEach((x) => (x.disabled = true));
-      await addEvent(role, role === 'provider' ? 'Provider' : 'Recipient');
+      await addEvent(role, role === 'provider' ? 'Provider' : 'Patient');
       view = role;
       renderSession();
       app.querySelector('.tx')?.classList.add('tx-new');
