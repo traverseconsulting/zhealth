@@ -269,3 +269,9 @@ h2 { font-size: var(--text-lg); }
 .devices summary { flex-wrap: wrap; row-gap: var(--space-2); }
 .devices summary .count { white-space: nowrap; }
 .device { align-content: start; }
+
+/* Center the Patient and Provider choices in the available page space. */
+.session:has(> .roles) { min-height: calc(100dvh - 70px); place-items: center; }
+.session > .roles { width: 100%; display: grid; justify-items: center; }
+.session > .roles .role-buttons { width: min(100%, 40rem); margin-inline: auto; }
+.session > .roles .btn-role { text-align: center; justify-items: center; align-content: center; min-height: 8rem; }
