@@ -289,3 +289,8 @@ h2 { font-size: var(--text-lg); }
 .contract-actions { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; margin-top: var(--space-3); }
 .contract-actions label { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; font-size: var(--text-sm); }
 .contract-actions select { max-width: 16rem; padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+
+/* Place role choices at the top of the content area, centered horizontally. */
+.session:has(> .roles) { min-height: 0; place-items: initial; padding-top: var(--space-6); }
+.session > .roles { align-self: start; justify-items: center; }
+.session > .roles .role-buttons { margin-inline: auto; }
