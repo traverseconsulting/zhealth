@@ -213,13 +213,10 @@ function txCard(t, n) {
 
 function intakePanel() {
   return `<section class="intake" aria-labelledby="intake-title">
-    <p class="eyebrow">Your health, your words</p>
     <h1 id="intake-title">What brings you in today?</h1>
-    <p class="intake-help">Tell the doctor what you're experiencing or what you'd like help with. For example: “I have a headache,” “My neck hurts,” or “I'd like a checkup.”</p>
     <form id="intake-form">
       <label for="complaint">Describe your symptoms or concerns</label>
-      <textarea id="complaint" name="complaint" rows="6" maxlength="2000" required placeholder="Tell us what's going on…"></textarea>
-      <p class="intake-warning">Prototype only: this text is displayed in a simulated public OP_RETURN transaction. Use fictional symptoms, not real personal or medical information.</p>
+      <textarea id="complaint" name="complaint" rows="6" maxlength="2000" required placeholder="How can we help you today?"></textarea>
       <button class="btn-submit" type="submit">Submit request · 1 BSV demo contract</button>
     </form>
   </section>`;
