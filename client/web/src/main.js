@@ -144,8 +144,8 @@ function keyChip() {
   const k = keys[keys.length - 1];
   if (!k) return '';
   return `
-  <button type="button" class="keychip keychip-copy" id="copy-key" title="Hover to view private key; click to copy" aria-label="BSV address ${k.address}. Hover to view private key; click to copy private key.">
-    <span class="mono">${k.address}</span>
+  <button type="button" class="keychip keychip-copy" id="copy-key" title="Hover to view private key; click to copy" aria-label="BSV public key ${k.pubHex}. Hover to view private key; click to copy private key.">
+    <span class="mono wrap">${k.pubHex}</span>
     <span class="keypop" role="tooltip"><span class="kp-label">Private key</span><span class="mono wrap">${k.privHex}</span></span>
   </button>`;
 }
@@ -235,6 +235,7 @@ function providerComplaintsPanel() {
 function intakePanel() {
   return `<section class="intake" aria-labelledby="intake-title">
     <h1 id="intake-title">What brings you in today?</h1>
+    ${txs.some(t => t.role === 'patient') ? '<p class="concern-status">Patient OP_RETURN transaction created locally · Not broadcast to BSV</p>' : ''}
     <form id="intake-form">
       <textarea id="complaint" name="complaint" rows="6" maxlength="2000" required aria-label="Describe your symptoms or concerns" placeholder="Describe your symptoms or concerns"></textarea>
       <button class="btn-submit" type="submit">Get Help</button>
@@ -466,7 +467,20 @@ function renderSession() {
     ${view === 'welcome' ? welcomePanel() : view === 'provider-list' ? providerComplaintsPanel() : view === 'intake' ? intakePanel() : view === 'recipient' ? recipientPanel() : view === 'provider' ? providerPanel() : rolesPanel()}
   </main>`;
 
-  document.getElementById('enter-patient')?.addEventListener('click', () => { view = 'intake'; renderSession(); });
+  document.getElementById('enter-patient')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      // Generate a fresh random HD seed for each Patient entry, independent of prior keys.
+      session = newSession();
+      const patientTx = await addEvent('patient', 'Patient', { label: 'Patient entry', type: 'identity.patient' });
+      view = 'intake';
+      renderSession();
+    } catch (error) {
+      button.disabled = false;
+      alert('Unable to create Patient transaction: ' + error.message);
+    }
+  });
   document.getElementById('enter-provider')?.addEventListener('click', () => { view = 'provider-list'; renderSession(); });
   document.getElementById('home-entry')?.addEventListener('click', () => { view = 'welcome'; renderSession(); });
   app.querySelectorAll('[data-open-provider]').forEach(b => b.addEventListener('click', () => {
