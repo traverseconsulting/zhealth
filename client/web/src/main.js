@@ -212,8 +212,8 @@ function welcomePanel() {
   return `<section class="entry-choice" aria-label="Choose patients or providers">
     
     <div class="entry-options">
-      <button type="button" class="entry-option" id="enter-patient"><strong>Patients</strong><span>Describe your symptoms or concerns</span></button>
-      <button type="button" class="entry-option" id="enter-provider"><strong>Providers</strong><span>View patient complaints</span></button>
+      <button type="button" class="entry-option" id="enter-patient"><strong>Patients</strong></button>
+      <button type="button" class="entry-option" id="enter-provider"><strong>Providers</strong></button>
     </div>
   </section>`;
 }
