@@ -135,7 +135,7 @@ async function startSession() {
   keys = []; txs = []; contracts = []; visit = null;
   complaintSubmitted = false;
   registry = await createRegistry();
-  view = 'intake';
+  view = 'welcome';
   renderSession();
 }
 
@@ -206,6 +206,31 @@ function txCard(t, n) {
       </div>
     </details>
   </article>`;
+}
+
+function welcomePanel() {
+  return `<section class="entry-choice" aria-labelledby="entry-title">
+    <h1 id="entry-title">Welcome to zHealth</h1>
+    <p>How would you like to continue?</p>
+    <div class="entry-options">
+      <button type="button" class="entry-option" id="enter-patient"><strong>Patients</strong><span>Describe your symptoms or concerns</span></button>
+      <button type="button" class="entry-option" id="enter-provider"><strong>Providers</strong><span>View patient complaints</span></button>
+    </div>
+  </section>`;
+}
+
+function providerComplaintsPanel() {
+  const concerns = contracts.filter(c => c.initial);
+  return `<section class="concerns" aria-labelledby="provider-complaints-title">
+    <div class="concerns-head"><h1 id="provider-complaints-title">Patient complaints</h1><button type="button" class="btn-back" id="home-entry">Back</button></div>
+    <p class="concern-status">Local demonstration requests only. Not yet synchronized across peers or published to BSV.</p>
+    ${concerns.length ? concerns.map(c => `<article class="concern-card">
+      <div class="concern-body"><p class="concern-text">${esc(c.complaint)}</p>
+      <span class="concern-status">${c.status === 'open' ? 'Open · Awaiting provider' : 'Consultation completed'}</span>
+      <span class="concern-status mono">Tx ${short(c.req.tpl.txid, 10, 8)}</span></div>
+      <div class="concern-actions"><button type="button" class="btn-role" data-open-provider="${c.id}">Open complaint</button></div>
+    </article>`).join('') : '<p class="empty">No complaints available in this browser session yet.</p>'}
+  </section>`;
 }
 
 function intakePanel() {
@@ -439,9 +464,17 @@ function renderSession() {
     ${keyChip()}
   </header>
   <main class="session">
-    ${view === 'intake' ? intakePanel() : view === 'recipient' ? recipientPanel() : view === 'provider' ? providerPanel() : rolesPanel()}
+    ${view === 'welcome' ? welcomePanel() : view === 'provider-list' ? providerComplaintsPanel() : view === 'intake' ? intakePanel() : view === 'recipient' ? recipientPanel() : view === 'provider' ? providerPanel() : rolesPanel()}
   </main>`;
 
+  document.getElementById('enter-patient')?.addEventListener('click', () => { view = 'intake'; renderSession(); });
+  document.getElementById('enter-provider')?.addEventListener('click', () => { view = 'provider-list'; renderSession(); });
+  document.getElementById('home-entry')?.addEventListener('click', () => { view = 'welcome'; renderSession(); });
+  app.querySelectorAll('[data-open-provider]').forEach(b => b.addEventListener('click', () => {
+    selectedConcernId = Number(b.dataset.openProvider);
+    view = 'provider';
+    renderSession();
+  }));
   document.getElementById('copy-key')?.addEventListener('click', async () => {
     const button = document.getElementById('copy-key');
     const key = keys[keys.length - 1];
