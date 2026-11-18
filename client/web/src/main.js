@@ -266,6 +266,7 @@ function providerComplaintsPanel() {
   return `<section class="concerns" aria-labelledby="provider-complaints-title">
     <div class="concerns-head"><h1 id="provider-complaints-title">Help the Patients</h1><button type="button" class="btn-back" id="home-entry">Back</button></div>
     <p class="concern-status">Complaints saved on this device as COMPLAINTS_LIST · BSV transactions awaiting broadcast.</p>
+    <button type="button" class="btn-back" id="reset-complaints-list">Reset Complaints List</button>
     ${concerns.length ? concerns.map(c => `<article class="concern-card">
       <div class="concern-body"><p class="concern-text">${esc(c.complaint)}</p>
       <span class="concern-status">${c.status === 'open' ? 'Open · Awaiting provider' : c.status === 'consulted' ? 'Consulted · Additional care decision pending' : c.status === 'additional-care-reserved' ? 'Additional care reserved' : 'Consultation completed'}</span>
@@ -562,6 +563,13 @@ function renderSession() {
     }
   });
   document.getElementById('enter-provider')?.addEventListener('click', () => { view = 'provider-list'; renderSession(); });
+  document.getElementById('reset-complaints-list')?.addEventListener('click', () => {
+    if (!window.confirm('Delete all complaints saved in COMPLAINTS_LIST on this browser? This cannot be undone.')) return;
+    localStorage.removeItem(COMPLAINTS_LIST);
+    contracts = contracts.filter(item => !item.initial);
+    selectedConcernId = null;
+    renderSession();
+  });
   document.getElementById('home-entry')?.addEventListener('click', () => { view = 'welcome'; renderSession(); });
   app.querySelectorAll('[data-open-provider-tx]').forEach(b => b.addEventListener('click', () => {
     const saved = readComplaintsList().find(item => item.txid === b.dataset.openProviderTx);
