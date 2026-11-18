@@ -333,3 +333,5 @@ h2 { font-size: var(--text-lg); }
 .entry-options { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
 .entry-option { width: 100%; min-height: 190px; display: flex; align-items: center; justify-content: center; text-align: center; }
 @media (max-width: 540px) { .entry-options { grid-template-columns: 1fr; } .entry-option { min-height: 145px; } }
+
+.keychip-label { display:block; font-size:.68rem; font-weight:600; letter-spacing:.035em; color:var(--ink-2); margin-bottom:2px; }
