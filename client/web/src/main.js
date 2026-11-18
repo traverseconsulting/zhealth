@@ -244,14 +244,14 @@ function welcomePanel() {
 function providerComplaintsPanel() {
   const concerns = contracts.filter(c => c.initial);
   return `<section class="concerns" aria-labelledby="provider-complaints-title">
-    <div class="concerns-head"><h1 id="provider-complaints-title">Patient complaints</h1><button type="button" class="btn-back" id="home-entry">Back</button></div>
-    <p class="concern-status">Local demonstration requests only. Not yet synchronized across peers or published to BSV.</p>
+    <div class="concerns-head"><h1 id="provider-complaints-title">Help the Patients</h1><button type="button" class="btn-back" id="home-entry">Back</button></div>
+    <p class="concern-status">Showing complaints created in this browser session. BSV blockchain retrieval is not connected yet.</p>
     ${concerns.length ? concerns.map(c => `<article class="concern-card">
       <div class="concern-body"><p class="concern-text">${esc(c.complaint)}</p>
       <span class="concern-status">${c.status === 'open' ? 'Open · Awaiting provider' : 'Consultation completed'}</span>
       <span class="concern-status mono">Tx ${short(c.req.tpl.txid, 10, 8)}</span><span class="concern-status">100 sats · ${c.status === "open" ? "Demo locked" : "Demo released"}</span></div>
       <div class="concern-actions"><button type="button" class="btn-role" data-open-provider="${c.id}">Open complaint · 100 sats</button></div>
-    </article>`).join('') : '<p class="empty">No complaints available in this browser session yet.</p>'}
+    </article>`).join('') : '<p class="empty">No active concerns found in this browser session.</p>'}
   </section>`;
 }
 
