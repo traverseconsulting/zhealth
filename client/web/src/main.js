@@ -144,17 +144,10 @@ function keyChip() {
   const k = keys[keys.length - 1];
   if (!k) return '';
   return `
-  <div class="keychip" tabindex="0" aria-describedby="keypop" aria-label="Latest BSV address for K${k.index}. Hover or focus to reveal the private key.">
-    <span class="keychip-tag">K${k.index}</span>
+  <button type="button" class="keychip keychip-copy" id="copy-key" title="Hover to view private key; click to copy" aria-label="BSV address ${k.address}. Hover to view private key; click to copy private key.">
     <span class="mono">${k.address}</span>
-    <div class="keypop" id="keypop" role="tooltip">
-      <div class="kp-row"><span class="kp-label">BSV address (P2PKH)</span><span class="mono wrap">${k.address}</span></div>
-      <div class="kp-row"><span class="kp-label">Path</span><span class="mono">${k.path}</span></div>
-      <div class="kp-row"><span class="kp-label">Public key (33 bytes)</span><span class="mono wrap">${k.pubHex}</span></div>
-      <div class="kp-row danger"><span class="kp-label">Private key (256-bit hex)</span><span class="mono wrap">${k.privHex}</span></div>
-      <div class="kp-row danger"><span class="kp-label">Private key (WIF)</span><span class="mono wrap">${k.wif}</span></div>
-    </div>
-  </div>`;
+    <span class="keypop" role="tooltip"><span class="kp-label">Private key</span><span class="mono wrap">${k.privHex}</span></span>
+  </button>`;
 }
 
 function txCard(t, n) {
@@ -475,6 +468,17 @@ function renderSession() {
     ${view === 'intake' ? intakePanel() : view === 'recipient' ? recipientPanel() : view === 'provider' ? providerPanel() : rolesPanel()}
   </main>`;
 
+  document.getElementById('copy-key')?.addEventListener('click', async () => {
+    const button = document.getElementById('copy-key');
+    const key = keys[keys.length - 1];
+    if (!key) return;
+    try {
+      await navigator.clipboard.writeText(key.privHex);
+      button.title = 'Private key copied';
+    } catch (error) {
+      button.title = 'Clipboard unavailable';
+    }
+  });
   document.getElementById('intake-form')?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
