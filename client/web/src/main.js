@@ -267,19 +267,8 @@ function intakePanel() {
 }
 
 function registrationPanel() {
-  const concern = contractById(selectedConcernId);
-  if (!concern) return rolesPanel();
-  const tx = concern.req.tpl;
   return `<section class="intake" aria-labelledby="registration-title">
     <h1 id="registration-title">Your complaint is registered</h1>
-    <p class="concern-status">Registration confirmed in this browser · BSV network: not broadcast</p>
-    <article class="concern-card"><div class="concern-body">
-      <p class="concern-text">${esc(concern.complaint)}</p>
-      <strong>New public key</strong><p class="mono wrap">${esc(concern.req.key.pubHex)}</p>
-      <strong>BSV transaction ID</strong><p class="mono wrap">${esc(tx.txid)}</p>
-      <strong>Registration transaction</strong><p class="mono wrap">${esc(tx.rawHex)}</p>
-      <p class="concern-status">Locally signed demonstration transaction. Not submitted to the BSV blockchain.</p>
-    </div></article>
     <button type="button" class="btn-submit" id="registration-continue">Continue</button>
   </section>`;
 }
@@ -556,7 +545,7 @@ function renderSession() {
       alert('Unable to prepare the demonstration transaction: ' + error.message);
     }
   });
-  document.getElementById('registration-continue')?.addEventListener('click', () => { view = 'roles'; renderSession(); });
+  document.getElementById('registration-continue')?.addEventListener('click', () => {});
   document.getElementById('export-healthblocks')?.addEventListener('click', exportHealthBlocks);
   document.getElementById('new-concern')?.addEventListener('click', () => { view = 'intake'; renderSession(); });
   app.querySelectorAll('[data-concern-role]').forEach((b) =>
