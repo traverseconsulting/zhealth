@@ -110,7 +110,8 @@ const short = (h, a = 10, b = 8) => `${h.slice(0, a)}…${h.slice(-b)}`;
 const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 function deriveKey() {
-  const key = session.nextKey();
+  // Independent random seed for every newly generated BSV address.
+  const key = newSession().nextKey();
   const info = keyInfo(key.privHex);
   if (info.pubHex !== key.pubHex) throw new Error('key mismatch between HD derivation and BSV SDK');
   key.address = info.address;
@@ -140,6 +141,28 @@ async function startSession() {
 }
 
 /* ---------- Page 2: Session ---------- */
+// Update only the header on clicks; preserve form input and page state.
+function refreshClickAddress() {
+  const key = deriveKey();
+  keys.push(key);
+  const oldChip = document.getElementById('copy-key');
+  if (!oldChip) return;
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = keyChip();
+  oldChip.replaceWith(wrapper.firstElementChild);
+  attachKeyCopy();
+}
+
+function attachKeyCopy() {
+  document.getElementById('copy-key')?.addEventListener('click', async () => {
+    const button = document.getElementById('copy-key');
+    const key = keys[keys.length - 1];
+    if (!key) return;
+    try { await navigator.clipboard.writeText(key.privHex); button.title = 'Private key copied'; }
+    catch { button.title = 'Clipboard unavailable'; }
+  });
+}
+
 function keyChip() {
   const k = keys[keys.length - 1];
   if (!k) return '';
@@ -488,17 +511,7 @@ function renderSession() {
     view = 'provider';
     renderSession();
   }));
-  document.getElementById('copy-key')?.addEventListener('click', async () => {
-    const button = document.getElementById('copy-key');
-    const key = keys[keys.length - 1];
-    if (!key) return;
-    try {
-      await navigator.clipboard.writeText(key.privHex);
-      button.title = 'Private key copied';
-    } catch (error) {
-      button.title = 'Clipboard unavailable';
-    }
-  });
+  attachKeyCopy();
   document.getElementById('intake-form')?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -643,3 +656,11 @@ function renderSession() {
 }
 
 startSession().catch(console.error);
+
+// Every action click gets a fresh independent address. The address chip itself
+// retains its copy-private-key behavior without rotating on that click.
+document.addEventListener('click', (event) => {
+  const button = event.target.closest('button');
+  if (!button || button.id === 'copy-key' || button.id === 'enter-patient' || button.disabled) return;
+  if (keys.length) refreshClickAddress();
+}, true);
