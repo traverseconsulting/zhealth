@@ -238,19 +238,6 @@ const backBtn = `
           Roles
         </button>`;
 
-function lastSigned() {
-  const t = txs[txs.length - 1];
-  return `
-      <div class="last-signed" role="status">
-        <span class="pill pill-ok">Signed</span>
-        <span>Tx ${txs.length} · <strong>${esc(t.label || ROLE_LABEL[t.role])}</strong> · K${t.key.index}</span>
-        <span class="mono last-addr">${t.key.address}</span>
-        ${t.role === 'service' && t.contractId ? `<span class="pill pill-contract">Contract #${t.contractId} posted for providers</span>` : ''}
-        <button type="button" class="btn-link" id="to-provider">View on Provider page →</button>
-      </div>`;
-}
-
-
 const resultDefault = (label) => (label === 'Take temperature' ? '37.0 °C' : label === 'Take blood pressure' ? '120/80 mmHg' : label === 'Check pulse' ? '72 bpm' : 'Normal');
 
 function visitPanel() {
