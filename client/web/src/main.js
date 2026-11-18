@@ -588,7 +588,7 @@ function renderSession() {
       alert('Unable to prepare the demonstration transaction: ' + error.message);
     }
   });
-  document.getElementById('registration-continue')?.addEventListener('click', () => {});
+  document.getElementById('registration-continue')?.addEventListener('click', () => { view = 'welcome'; renderSession(); });
   document.getElementById('export-healthblocks')?.addEventListener('click', exportHealthBlocks);
   document.getElementById('new-concern')?.addEventListener('click', () => { view = 'intake'; renderSession(); });
   app.querySelectorAll('[data-concern-role]').forEach((b) =>
