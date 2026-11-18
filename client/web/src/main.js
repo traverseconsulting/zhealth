@@ -1,5 +1,5 @@
 import './style.css';
-import { recordClickTransaction } from './click-transactions.js';
+import { recordClickTransaction, downloadClickTransactions } from './click-transactions.js';
 import { initializeJournal, appendHealthEvent, getJournal, exportHealthBlocks } from './healthblocks.js';
 import { newSession, ACCOUNT_PATH } from './chain.js';
 import { buildTx, keyInfo, PLACEHOLDER_SATS, CLOSE_SATS } from './tx.js';
@@ -525,11 +525,21 @@ function renderSession() {
   <header class="topbar">
     <div class="brand"><span class="brand-mark" aria-hidden="true">z</span><span>zHealth</span></div>
     ${keyChip()}
+    <button type="button" class="btn-back" id="download-transactions">Download Transactions</button>
   </header>
   <main class="session">
     ${view === 'welcome' ? welcomePanel() : view === 'provider-list' ? providerComplaintsPanel() : view === 'intake' ? intakePanel() : view === 'registration' ? registrationPanel() : view === 'recipient' ? recipientPanel() : view === 'provider' ? providerPanel() : rolesPanel()}
   </main>`;
 
+  document.getElementById('download-transactions')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      const count = await downloadClickTransactions();
+      if (!count) alert('No saved transactions found yet.');
+    } catch (error) { alert('Unable to download transactions: ' + error.message); }
+    finally { button.disabled = false; }
+  });
   document.getElementById('enter-patient')?.addEventListener('click', async (event) => {
     const button = event.currentTarget;
     button.disabled = true;
