@@ -266,6 +266,24 @@ function intakePanel() {
   </section>`;
 }
 
+function registrationPanel() {
+  const concern = contractById(selectedConcernId);
+  if (!concern) return rolesPanel();
+  const tx = concern.req.tpl;
+  return `<section class="intake" aria-labelledby="registration-title">
+    <h1 id="registration-title">Your complaint is registered</h1>
+    <p class="concern-status">Registration confirmed in this browser · BSV network: not broadcast</p>
+    <article class="concern-card"><div class="concern-body">
+      <p class="concern-text">${esc(concern.complaint)}</p>
+      <strong>New public key</strong><p class="mono wrap">${esc(concern.req.key.pubHex)}</p>
+      <strong>BSV transaction ID</strong><p class="mono wrap">${esc(tx.txid)}</p>
+      <strong>Registration transaction</strong><p class="mono wrap">${esc(tx.rawHex)}</p>
+      <p class="concern-status">Locally signed demonstration transaction. Not submitted to the BSV blockchain.</p>
+    </div></article>
+    <button type="button" class="btn-submit" id="registration-continue">Continue</button>
+  </section>`;
+}
+
 function rolesPanel() {
   const concerns = contracts.filter(c => c.initial);
   return `
@@ -489,7 +507,7 @@ function renderSession() {
     ${keyChip()}
   </header>
   <main class="session">
-    ${view === 'welcome' ? welcomePanel() : view === 'provider-list' ? providerComplaintsPanel() : view === 'intake' ? intakePanel() : view === 'recipient' ? recipientPanel() : view === 'provider' ? providerPanel() : rolesPanel()}
+    ${view === 'welcome' ? welcomePanel() : view === 'provider-list' ? providerComplaintsPanel() : view === 'intake' ? intakePanel() : view === 'registration' ? registrationPanel() : view === 'recipient' ? recipientPanel() : view === 'provider' ? providerPanel() : rolesPanel()}
   </main>`;
 
   document.getElementById('enter-patient')?.addEventListener('click', async (event) => {
@@ -530,7 +548,7 @@ function renderSession() {
       contracts.push({ id, svc, req, reqN: txs.length, status: 'open', reward: REWARD_SATS, escrowSats: REWARD_SATS, initial: true, complaint });
       complaintSubmitted = true;
       selectedConcernId = id;
-      view = 'roles';
+      view = 'registration';
       renderSession();
     } catch (error) {
       submit.disabled = false;
@@ -538,6 +556,7 @@ function renderSession() {
       alert('Unable to prepare the demonstration transaction: ' + error.message);
     }
   });
+  document.getElementById('registration-continue')?.addEventListener('click', () => { view = 'roles'; renderSession(); });
   document.getElementById('export-healthblocks')?.addEventListener('click', exportHealthBlocks);
   document.getElementById('new-concern')?.addEventListener('click', () => { view = 'intake'; renderSession(); });
   app.querySelectorAll('[data-concern-role]').forEach((b) =>
