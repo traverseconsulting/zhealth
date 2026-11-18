@@ -310,3 +310,9 @@ h2 { font-size: var(--text-lg); }
 .concern-actions { display: grid; grid-template-columns: repeat(2, minmax(8rem, 1fr)); gap: var(--space-3); }
 .concern-actions .btn-role { min-height: 5.5rem; text-align: center; justify-items: center; align-content: center; padding: var(--space-3); }
 @media (max-width: 720px) { .concern-card { grid-template-columns: 1fr; } .concern-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Minimal BSV address chip: hover reveals only the private key; click copies it. */
+.keychip-copy { cursor: pointer; font: inherit; text-align: left; }
+.keychip-copy .keypop { display: none; }
+.keychip-copy:hover .keypop, .keychip-copy:focus-visible .keypop { display: block; }
+.keychip-copy .keypop .kp-label { display: block; }
