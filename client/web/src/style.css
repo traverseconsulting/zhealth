@@ -294,3 +294,6 @@ h2 { font-size: var(--text-lg); }
 .session:has(> .roles) { min-height: 0; place-items: initial; padding-top: var(--space-6); }
 .session > .roles { align-self: start; justify-items: center; }
 .session > .roles .role-buttons { margin-inline: auto; }
+
+/* zHealth brand color for the patient intake heading. */
+.intake h1 { color: var(--accent); }
