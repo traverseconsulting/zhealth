@@ -275,3 +275,17 @@ h2 { font-size: var(--text-lg); }
 .session > .roles { width: 100%; display: grid; justify-items: center; }
 .session > .roles .role-buttons { width: min(100%, 40rem); margin-inline: auto; }
 .session > .roles .btn-role { text-align: center; justify-items: center; align-content: center; min-height: 8rem; }
+
+/* Patient intake and consultation demo */
+.session:has(> .intake) { min-height: calc(100dvh - 70px); place-items: center; }
+.intake { width: min(100%, 42rem); display: grid; gap: var(--space-4); }
+.intake h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); letter-spacing: -.025em; }
+.intake-help { margin: 0; color: var(--ink-2); }
+.intake form { display: grid; gap: var(--space-3); }
+.intake label { font-weight: 600; }
+.intake textarea { width: 100%; resize: vertical; min-height: 10rem; padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); color: var(--ink); font: inherit; }
+.intake .btn-submit { justify-self: start; padding: var(--space-3) var(--space-5); }
+.intake-warning { margin: 0; font-size: var(--text-xs); color: var(--danger); }
+.contract-actions { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; margin-top: var(--space-3); }
+.contract-actions label { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; font-size: var(--text-sm); }
+.contract-actions select { max-width: 16rem; padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
