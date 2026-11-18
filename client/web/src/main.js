@@ -9,6 +9,25 @@ const app = document.getElementById('app');
 // Demo reward a provider earns for fulfilling a patient's service contract.
 // Real amounts and escrow are not decided yet.
 const REWARD_SATS = 100;
+const COMPLAINTS_LIST = 'COMPLAINTS_LIST';
+function readComplaintsList() {
+  try {
+    const data = JSON.parse(localStorage.getItem(COMPLAINTS_LIST) || '[]');
+    return Array.isArray(data) ? data.filter(item => item && typeof item.txid === 'string' && typeof item.rawHex === 'string') : [];
+  } catch { return []; }
+}
+function saveComplaintTransaction(complaint, req) {
+  const entries = readComplaintsList();
+  const entry = {
+    version: 1, format: 'BSV-raw-transaction', network: 'BSV-mainnet',
+    broadcastStatus: 'pending', txid: req.tpl.txid, rawHex: req.tpl.rawHex,
+    complaint, publicKey: req.key.pubHex, address: req.key.address,
+    rewardSats: REWARD_SATS, status: 'open', createdAt: new Date().toISOString()
+  };
+  if (!entries.some(item => item.txid === entry.txid)) entries.push(entry);
+  localStorage.setItem(COMPLAINTS_LIST, JSON.stringify(entries));
+}
+
 const ONE_BSV_SATS = 100_000_000;
 const HALF_BSV_SATS = 50_000_000;
 
@@ -242,15 +261,15 @@ function welcomePanel() {
 }
 
 function providerComplaintsPanel() {
-  const concerns = contracts.filter(c => c.initial);
+  const concerns = readComplaintsList();
   return `<section class="concerns" aria-labelledby="provider-complaints-title">
     <div class="concerns-head"><h1 id="provider-complaints-title">Help the Patients</h1><button type="button" class="btn-back" id="home-entry">Back</button></div>
-    <p class="concern-status">Showing complaints created in this browser session. BSV blockchain retrieval is not connected yet.</p>
+    <p class="concern-status">Complaints saved on this device as COMPLAINTS_LIST · BSV transactions awaiting broadcast.</p>
     ${concerns.length ? concerns.map(c => `<article class="concern-card">
       <div class="concern-body"><p class="concern-text">${esc(c.complaint)}</p>
       <span class="concern-status">${c.status === 'open' ? 'Open · Awaiting provider' : 'Consultation completed'}</span>
-      <span class="concern-status mono">Tx ${short(c.req.tpl.txid, 10, 8)}</span><span class="concern-status">100 sats · ${c.status === "open" ? "Demo locked" : "Demo released"}</span></div>
-      <div class="concern-actions"><button type="button" class="btn-role" data-open-provider="${c.id}">Open complaint · 100 sats</button></div>
+      <span class="concern-status mono">Tx ${short(c.txid, 10, 8)}</span><span class="concern-status">100 sats · ${c.status === "open" ? "Demo locked" : "Demo released"}</span></div>
+      <div class="concern-actions"><button type="button" class="btn-role" data-open-provider-tx="${c.txid}">Open complaint · 100 sats</button></div>
     </article>`).join('') : '<p class="empty">No active concerns found in this browser session.</p>'}
   </section>`;
 }
@@ -515,8 +534,19 @@ function renderSession() {
   });
   document.getElementById('enter-provider')?.addEventListener('click', () => { view = 'provider-list'; renderSession(); });
   document.getElementById('home-entry')?.addEventListener('click', () => { view = 'welcome'; renderSession(); });
-  app.querySelectorAll('[data-open-provider]').forEach(b => b.addEventListener('click', () => {
-    selectedConcernId = Number(b.dataset.openProvider);
+  app.querySelectorAll('[data-open-provider-tx]').forEach(b => b.addEventListener('click', () => {
+    const saved = readComplaintsList().find(item => item.txid === b.dataset.openProviderTx);
+    if (!saved) return;
+    let concern = contracts.find(item => item.initial && item.req.tpl.txid === saved.txid);
+    if (!concern) {
+      const svc = findService('consultation');
+      const id = Math.max(0, ...contracts.map(item => item.id)) + 1;
+      concern = { id, svc, complaint: saved.complaint, initial: true, status: saved.status,
+        reward: saved.rewardSats, escrowSats: saved.status === 'open' ? saved.rewardSats : 0,
+        req: { tpl: { txid: saved.txid, rawHex: saved.rawHex }, key: { pubHex: saved.publicKey, address: saved.address } } };
+      contracts.push(concern);
+    }
+    selectedConcernId = concern.id;
     view = 'provider';
     renderSession();
   }));
@@ -534,6 +564,7 @@ function renderSession() {
       const svc = findService('consultation');
       const id = contracts.length + 1;
       const req = await addEvent('service', complaint, { label: 'Initial consultation', type: svc.type, group: svc.group, contractId: id, sid: svc.sid }, { extra: [svc.sid] });
+      saveComplaintTransaction(complaint, req);
       contracts.push({ id, svc, req, reqN: txs.length, status: 'open', reward: REWARD_SATS, escrowSats: REWARD_SATS, initial: true, complaint });
       complaintSubmitted = true;
       selectedConcernId = id;
@@ -595,6 +626,9 @@ function renderSession() {
       concern.providerAddress = providerKey.address;
       concern.providerPrivateKey = providerKey.privHex;
       concern.status = 'fulfilled'; concern.doctorPaidSats = REWARD_SATS; concern.escrowSats = 0;
+      const savedList = readComplaintsList();
+      const savedComplaint = savedList.find(item => item.txid === concern.req.tpl.txid);
+      if (savedComplaint) { savedComplaint.status = 'fulfilled'; localStorage.setItem(COMPLAINTS_LIST, JSON.stringify(savedList)); }
       renderSession();
       alert('Service rendered. 100 sat demo allocation assigned to the new provider address. Copy its private key from the top right. No real funds transferred.');
     } catch (error) { alert(error.message); renderSession(); }
