@@ -5,7 +5,6 @@ import { serviceId, createRegistry, devicesFor, signReading, validateReading, un
 import { matchCode, closeAddressForPatient, closeKeyForPatient, randomPeerKey } from './ecdh.js';
 
 const app = document.getElementById('app');
-const WELCOME_TEXT = 'Welcome to the Zhealth';
 // Demo reward a provider earns for fulfilling a patient's service contract.
 // Real amounts and escrow are not decided yet.
 const REWARD_SATS = 100;
@@ -127,27 +126,13 @@ async function addEvent(role, text, extra = {}, opts = {}) {
 const contractById = (id) => contracts.find((c) => c.id === id);
 
 /* ---------- Page 1: Welcome ---------- */
-function renderWelcome() {
-  app.innerHTML = `
-  <main class="welcome">
-    <div class="welcome-inner">
-      <p class="eyebrow">Peer-to-peer healthcare system</p>
-      <button class="btn-welcome" id="welcome" type="button">
-        <span>Welcome to zHealth</span>
-        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-    </div>
-  </main>`;
-  document.getElementById('welcome').addEventListener('click', async () => {
-    session = newSession();
-    keys = []; txs = []; contracts = []; visit = null;
-    registry = await createRegistry();
-    await addEvent('welcome', WELCOME_TEXT);
-    view = 'intake';
-    complaintSubmitted = false;
-    renderSession();
-    window.scrollTo(0, 0);
-  });
+async function startSession() {
+  session = newSession();
+  keys = []; txs = []; contracts = []; visit = null;
+  complaintSubmitted = false;
+  registry = await createRegistry();
+  view = 'intake';
+  renderSession();
 }
 
 /* ---------- Page 2: Session ---------- */
@@ -613,9 +598,9 @@ function renderSession() {
       setTimeout(() => (b.textContent = 'Copy hex'), 1500);
     }));
   document.getElementById('end')?.addEventListener('click', () => {
-    session = null; keys = []; txs = []; contracts = []; visit = null; view = 'roles';
-    renderWelcome();
+    session = null; keys = []; txs = []; contracts = []; visit = null;
+    startSession().catch(console.error);
   });
 }
 
-renderWelcome();
+startSession().catch(console.error);
