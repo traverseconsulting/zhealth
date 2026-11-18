@@ -63,7 +63,7 @@ export function exportHealthBlocks() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'hblk00000.txt';
+  a.download = 'hblk00000.dat';
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
