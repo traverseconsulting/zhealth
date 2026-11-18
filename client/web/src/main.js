@@ -4,7 +4,7 @@ import { initializeJournal, appendHealthEvent, getJournal, exportHealthBlocks } 
 import { newSession, ACCOUNT_PATH } from './chain.js';
 import { buildTx, keyInfo, PLACEHOLDER_SATS, CLOSE_SATS } from './tx.js';
 import { serviceId, createRegistry, devicesFor, signReading, validateReading, unregisteredDevice } from './devices.js';
-import { matchCode, closeAddressForPatient, closeKeyForPatient, randomPeerKey } from './ecdh.js';
+import { matchCode, sharedSecretHex, closeAddressForPatient, closeKeyForPatient, randomPeerKey } from './ecdh.js';
 
 const app = document.getElementById('app');
 // Demo reward a provider earns for fulfilling a patient's service contract.
@@ -486,6 +486,10 @@ function providerPanel() {
       ${currentComplaint?.initial ? `<section class="contracts">
         <h2>Patient complaint · 100 sats</h2>
         <p>${esc(currentComplaint.complaint)}</p>
+        <p><strong>Patient public key:</strong> <span class="mono wrap">${esc(currentComplaint.req.key.pubHex)}</span></p>
+        ${currentComplaint.providerPublicKey ? `<p><strong>Provider public key:</strong> <span class="mono wrap">${esc(currentComplaint.providerPublicKey)}</span></p>
+        <p><strong>ECDH handshake:</strong> ${currentComplaint.handshake?.verified === true ? 'Both sides verified' : 'Provider shared secret derived; patient-side confirmation pending'}</p>
+        <p><strong>100 sats escrow:</strong> Demo reserved only — not funded or locked on BSV</p>` : ''}
         <p><strong>50 sats</strong> · Call / text consultation</p>
         <p><strong>50 sats</strong> · Referral reserve, or return to patient if unused</p>
         ${currentComplaint.status === 'open' ? `<button type="button" class="btn-submit" id="complete-complaint">Complete call / text · 50 sats</button>` : ''}
@@ -567,6 +571,38 @@ function renderSession() {
         reward: saved.rewardSats, escrowSats: saved.status === 'open' ? saved.rewardSats : 0,
         req: { tpl: { txid: saved.txid, rawHex: saved.rawHex }, key: { pubHex: saved.publicKey, address: saved.address } } };
       contracts.push(concern);
+    }
+    if (!concern.providerPublicKey && concern.status === 'open') {
+      const providerKey = deriveKey();
+      const patientPublicKey = concern.req.key.pubHex;
+      const providerSecret = sharedSecretHex(providerKey.privHex, patientPublicKey);
+      const patientKey = keys.find(key => key.pubHex === patientPublicKey);
+      const verified = patientKey ? sharedSecretHex(patientKey.privHex, providerKey.pubHex) === providerSecret : null;
+      concern.providerPublicKey = providerKey.pubHex;
+      concern.providerAddress = providerKey.address;
+      concern.providerPrivateKey = providerKey.privHex;
+      concern.handshake = { patientPublicKey, providerPublicKey: providerKey.pubHex,
+        matchCode: matchCode(providerKey.privHex, patientPublicKey), verified };
+      concern.escrowSats = 100;
+      concern.escrowStatus = 'demo-reserved-not-funded';
+      const savedList = readComplaintsList();
+      const record = savedList.find(item => item.txid === saved.txid);
+      if (record) {
+        record.providerPublicKey = providerKey.pubHex;
+        record.providerAddress = providerKey.address;
+        record.handshakeStatus = verified === true ? 'verified-locally' : 'provider-derived-patient-unverified';
+        record.escrowSats = 100;
+        record.escrowStatus = 'demo-reserved-not-funded';
+        localStorage.setItem(COMPLAINTS_LIST, JSON.stringify(savedList));
+      }
+      addEvent('provider.accept', 'Provider acceptance for complaint ' + saved.txid,
+        { label: 'Provider ECDH acceptance', contractId: concern.id },
+        { key: providerKey, extra: [patientPublicKey] }).then(acceptance => {
+          concern.acceptance = acceptance;
+          const list = readComplaintsList();
+          const item = list.find(entry => entry.txid === saved.txid);
+          if (item) { item.acceptanceTxid = acceptance.tpl.txid; item.acceptanceRawHex = acceptance.tpl.rawHex; localStorage.setItem(COMPLAINTS_LIST, JSON.stringify(list)); }
+        }).catch(error => console.warn('Unable to prepare provider acceptance demo transaction', error));
     }
     selectedConcernId = concern.id;
     view = 'provider';
