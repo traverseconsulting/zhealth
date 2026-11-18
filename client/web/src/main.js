@@ -473,8 +473,8 @@ function renderSession() {
 
   document.getElementById('intake-form')?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (form.dataset.submitting === 'true') return;
     const form = event.currentTarget;
+    if (form.dataset.submitting === 'true') return;
     const complaint = form.querySelector('#complaint').value.trim();
     if (!complaint) return;
     const submit = form.querySelector('button[type="submit"]');
