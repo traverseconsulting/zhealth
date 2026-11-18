@@ -45,3 +45,40 @@ export function recordClickTransaction(action) {
   });
   return queue;
 }
+
+export async function downloadClickTransactions() {
+  // Wait for any click transaction currently being serialized and saved.
+  await queue.catch(() => {});
+  const records = {};
+  try {
+    Object.assign(records, JSON.parse(localStorage.getItem(INDEX) || '{}'));
+  } catch { /* OPFS may still be available */ }
+  if (navigator.storage?.getDirectory) {
+    try {
+      const root = await navigator.storage.getDirectory();
+      const folder = await root.getDirectoryHandle(ROOT);
+      for await (const [name, handle] of folder.entries()) {
+        if (handle.kind !== 'file' || !name.endsWith('.json')) continue;
+        records[name] = JSON.parse(await (await handle.getFile()).text());
+      }
+    } catch (error) { console.warn('Unable to read OPFS transactions', error); }
+  }
+  const names = Object.keys(records).sort();
+  if (!names.length) return 0;
+  const payload = {
+    format: 'zHealth-BSV-demo-transaction-export',
+    exportedAt: new Date().toISOString(),
+    count: names.length,
+    transactions: names.map(filename => ({ filename, ...records[filename] }))
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'zhealth-bsv-demo-transactions-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return names.length;
+}
