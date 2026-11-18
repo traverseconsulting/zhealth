@@ -103,6 +103,7 @@ let contracts = [];
 let visit = null;    // clinic visit state (ECDH matching)
 let peerSeq = 0;
 let complaintSubmitted = false;
+let selectedConcernId = null;
 
 const short = (h, a = 10, b = 8) => `${h.slice(0, a)}…${h.slice(-b)}`;
 const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -222,17 +223,23 @@ function intakePanel() {
 }
 
 function rolesPanel() {
+  const concerns = contracts.filter(c => c.initial);
   return `
-    <section class="roles" aria-label="Choose a role">
-      <div class="role-buttons">
-        <button type="button" class="btn-role" data-role="provider">
-          <span class="role-name">Provider</span><span class="role-desc">Clinician, lab, device</span>
-          ${contracts.some((c) => c.status === 'open') ? `<span class="role-badge">${contracts.filter((c) => c.status === 'open').length} open contracts</span>` : ''}
-        </button>
-        <button type="button" class="btn-role" data-role="recipient">
-          <span class="role-name">Patient</span><span class="role-desc">Patient receiving care</span>
-        </button>
-      </div>
+    <section class="concerns" aria-label="Patient concerns">
+      <div class="concerns-head"><h1>Active concerns</h1><button type="button" class="btn-back" id="new-concern">+ New concern</button></div>
+      ${concerns.length ? concerns.map(c => `
+        <article class="concern-card">
+          <div class="concern-body">
+            <p class="concern-text">${esc(c.complaint)}</p>
+            <span class="concern-status">${c.status === 'open' ? 'Open · Awaiting provider' : 'Consultation completed'}</span>
+            <span class="concern-status">BSV network: Not broadcast · Demo transaction only</span>
+            <span class="concern-status mono">Tx ${short(c.req.tpl.txid, 10, 8)}</span>
+          </div>
+          <div class="concern-actions">
+            <button type="button" class="btn-role" data-concern-role="provider" data-concern-id="${c.id}"><span class="role-name">Provider</span><span class="role-desc">Clinician, lab, device</span></button>
+            <button type="button" class="btn-role" data-concern-role="recipient" data-concern-id="${c.id}"><span class="role-name">Patient</span><span class="role-desc">Patient receiving care</span></button>
+          </div>
+        </article>`).join('') : '<p class="empty">No concerns submitted yet.</p>'}
     </section>`;
 }
 
@@ -466,33 +473,39 @@ function renderSession() {
 
   document.getElementById('intake-form')?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (complaintSubmitted) return;
+    if (form.dataset.submitting === 'true') return;
     const form = event.currentTarget;
     const complaint = form.querySelector('#complaint').value.trim();
     if (!complaint) return;
     const submit = form.querySelector('button[type="submit"]');
     submit.disabled = true;
+    form.dataset.submitting = 'true';
     try {
       const svc = findService('consultation');
       const id = contracts.length + 1;
       const req = await addEvent('service', complaint, { label: 'Initial consultation', type: svc.type, group: svc.group, contractId: id, sid: svc.sid }, { extra: [svc.sid] });
       contracts.push({ id, svc, req, reqN: txs.length, status: 'open', reward: ONE_BSV_SATS, escrowSats: ONE_BSV_SATS, initial: true, complaint });
       complaintSubmitted = true;
+      selectedConcernId = id;
       view = 'roles';
       renderSession();
     } catch (error) {
       submit.disabled = false;
+      form.dataset.submitting = 'false';
       alert('Unable to prepare the demonstration transaction: ' + error.message);
     }
   });
-  app.querySelectorAll('.btn-role').forEach((b) =>
+  document.getElementById('new-concern')?.addEventListener('click', () => { view = 'intake'; renderSession(); });
+  app.querySelectorAll('[data-concern-role]').forEach((b) =>
     b.addEventListener('click', async () => {
-      const role = b.dataset.role;
-      app.querySelectorAll('.btn-role').forEach((x) => (x.disabled = true));
-      await addEvent(role, role === 'provider' ? 'Provider' : 'Patient');
-      view = role;
-      renderSession();
-      app.querySelector('.tx')?.classList.add('tx-new');
+      const role = b.dataset.concernRole;
+      selectedConcernId = Number(b.dataset.concernId);
+      app.querySelectorAll('[data-concern-role]').forEach(x => (x.disabled = true));
+      try {
+        await addEvent(role, role === 'provider' ? 'Provider' : 'Patient');
+        view = role;
+        renderSession();
+      } catch (error) { alert('Unable to open concern: ' + error.message); renderSession(); }
     }));
   app.querySelectorAll('.btn-svc').forEach((b) =>
     b.addEventListener('click', async () => {
