@@ -9,10 +9,16 @@ const WELCOME_TEXT = 'Welcome to the Zhealth';
 // Demo reward a provider earns for fulfilling a patient's service contract.
 // Real amounts and escrow are not decided yet.
 const REWARD_SATS = 100;
+const ONE_BSV_SATS = 100_000_000;
+const HALF_BSV_SATS = 50_000_000;
+
 
 // Patient page: direct patient care services. Each one is an event
 // microservice; its spec 5.2 event type is recorded on the transaction card.
 const SERVICES = {
+  consultation: { title: 'Doctor consultation', color: '#0f5f5a', soft: '#e2efec', items: [
+    { id: 'consultation', label: 'Doctor consultation', type: 'service.dispatch', desc: 'Initial patient complaint' },
+  ] },
   vitals: {
     title: 'Vital signs', color: '#0f5f5a', soft: '#e2efec',
     items: [
@@ -90,13 +96,14 @@ const findService = (id) => {
 };
 
 const ROLE_LABEL = { welcome: 'Welcome', provider: 'Provider', recipient: 'Patient', fulfil: 'Fulfilment' };
-let view = 'roles';   // 'roles' | 'recipient' | 'provider'
+let view = 'roles';   // 'intake' | 'roles' | 'recipient' | 'provider'
 let session = null;   // HD session (in memory only)
 let keys = [];        // derived keys, in order
 let txs = [];
 let contracts = [];
 let visit = null;    // clinic visit state (ECDH matching)
 let peerSeq = 0;
+let complaintSubmitted = false;
 
 const short = (h, a = 10, b = 8) => `${h.slice(0, a)}…${h.slice(-b)}`;
 const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -136,7 +143,8 @@ function renderWelcome() {
     keys = []; txs = []; contracts = []; visit = null;
     registry = await createRegistry();
     await addEvent('welcome', WELCOME_TEXT);
-    view = 'roles';
+    view = 'intake';
+    complaintSubmitted = false;
     renderSession();
     window.scrollTo(0, 0);
   });
@@ -215,6 +223,20 @@ function txCard(t, n) {
       </div>
     </details>
   </article>`;
+}
+
+function intakePanel() {
+  return `<section class="intake" aria-labelledby="intake-title">
+    <p class="eyebrow">Your health, your words</p>
+    <h1 id="intake-title">What brings you in today?</h1>
+    <p class="intake-help">Tell the doctor what you're experiencing or what you'd like help with. For example: “I have a headache,” “My neck hurts,” or “I'd like a checkup.”</p>
+    <form id="intake-form">
+      <label for="complaint">Describe your symptoms or concerns</label>
+      <textarea id="complaint" name="complaint" rows="6" maxlength="2000" required placeholder="Tell us what's going on…"></textarea>
+      <p class="intake-warning">Prototype only: this text is displayed in a simulated public OP_RETURN transaction. Use fictional symptoms, not real personal or medical information.</p>
+      <button class="btn-submit" type="submit">Submit request · 1 BSV demo contract</button>
+    </form>
+  </section>`;
 }
 
 function rolesPanel() {
@@ -355,7 +377,7 @@ function devicesPanel() {
 function contractsPanel() {
   const open = contracts.filter((c) => c.status === 'open');
   const done = contracts.filter((c) => c.status === 'fulfilled');
-  const earned = done.reduce((a, c) => a + c.reward, 0);
+  const earned = done.reduce((a, c) => a + (c.doctorPaidSats || 0), 0);
   const card = (c) => {
     const g = SERVICES[c.svc.group];
     return `
@@ -373,11 +395,12 @@ function contractsPanel() {
             </div>
           </div>
           <div class="contract-side">
-            <span class="reward">${c.reward} sat</span>
+            <span class="reward">${c.escrowSats !== undefined ? (c.escrowSats / ONE_BSV_SATS).toFixed(2) + ' BSV demo' : c.reward + ' sat demo'}</span>
             ${c.status === 'open'
               ? `<span class="open-tag">Open</span>`
               : `<span class="fulfilled">Closed in Tx ${c.fulN} · K${c.ful.key.index}</span>`}
           </div>
+          ${c.initial && c.status === 'open' ? `<div class="contract-actions"><button type="button" class="btn-submit" data-consult-complete="${c.id}">Complete consultation · 1 BSV</button><label>Request another service <select data-consult-service="${c.id}">${Object.values(SERVICES).flatMap(g => g.items).filter(it => it.id !== 'consultation').map(it => `<option value="${it.id}">${esc(it.label)}</option>`).join('')}</select></label><button type="button" class="btn-ghost" data-consult-refer="${c.id}">Pay doctor 0.5 BSV + refer 0.5 BSV</button></div>` : ''}
         </li>`;
   };
   return `
@@ -386,13 +409,13 @@ function contractsPanel() {
           <h2 id="ct-h">Service contracts</h2>
           <span class="count">${open.length} open</span>
           <span class="count">${done.length} closed</span>
-          <span class="count count-earned">${earned} sat earned</span>
+          <span class="count count-earned">${(earned / ONE_BSV_SATS).toFixed(2)} BSV demo doctor allocation</span>
         </div>
         ${contracts.length
           ? `<ol class="contract-list">${[...open, ...done].map(card).join('')}</ol>`
           : `<p class="empty">No contracts yet. Each service a patient requests shows up here for providers to fulfil.</p>`}
         <button type="button" class="btn-ghost" id="add-peers">Add 4 requests from other peers</button>
-        <p class="disclaimer">Rewards are demo amounts. Real payouts need escrow and funded inputs.</p>
+        <p class="disclaimer">All BSV amounts are simulated allocations only. No coins are locked, transferred, or broadcast.</p>
       </section>`;
 }
 
@@ -456,9 +479,30 @@ function renderSession() {
     ${keyChip()}
   </header>
   <main class="session">
-    ${view === 'recipient' ? recipientPanel() : view === 'provider' ? providerPanel() : rolesPanel()}
+    ${view === 'intake' ? intakePanel() : view === 'recipient' ? recipientPanel() : view === 'provider' ? providerPanel() : rolesPanel()}
   </main>`;
 
+  document.getElementById('intake-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (complaintSubmitted) return;
+    const form = event.currentTarget;
+    const complaint = form.querySelector('#complaint').value.trim();
+    if (!complaint) return;
+    const submit = form.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    try {
+      const svc = findService('consultation');
+      const id = contracts.length + 1;
+      const req = await addEvent('service', complaint, { label: 'Initial consultation', type: svc.type, group: svc.group, contractId: id, sid: svc.sid }, { extra: [svc.sid] });
+      contracts.push({ id, svc, req, reqN: txs.length, status: 'open', reward: ONE_BSV_SATS, escrowSats: ONE_BSV_SATS, initial: true, complaint });
+      complaintSubmitted = true;
+      view = 'roles';
+      renderSession();
+    } catch (error) {
+      submit.disabled = false;
+      alert('Unable to prepare the demonstration transaction: ' + error.message);
+    }
+  });
   app.querySelectorAll('.btn-role').forEach((b) =>
     b.addEventListener('click', async () => {
       const role = b.dataset.role;
@@ -478,6 +522,23 @@ function renderSession() {
       renderSession();
       app.querySelector('.tx')?.classList.add('tx-new');
     }));
+  async function resolveConsultation(id, referral) {
+    const c = contractById(id);
+    if (!c || !c.initial || c.status !== 'open') return;
+    const service = referral ? findService(app.querySelector(`[data-consult-service="${id}"]`).value) : null;
+    const doctorPaidSats = referral ? HALF_BSV_SATS : ONE_BSV_SATS;
+    const note = referral ? `Consultation referred: ${service.label}; simulated doctor allocation 0.5 BSV and new service escrow 0.5 BSV` : 'Consultation fulfilled; simulated doctor allocation 1 BSV';
+    const ful = await addEvent('fulfil', note, { label: referral ? 'Consultation referral' : 'Consultation complete', contractId: c.id });
+    c.ful = ful; c.fulN = txs.length; c.status = 'fulfilled'; c.doctorPaidSats = doctorPaidSats;
+    c.escrowSats = 0;
+    if (referral) {
+      const req = await addEvent('service', `Follow-up requested: ${service.label}`, { label: service.label, type: service.type, group: service.group, contractId: contracts.length + 1, sid: service.sid }, { extra: [service.sid] });
+      contracts.push({ id: contracts.length + 1, svc: service, req, reqN: txs.length, status: 'open', reward: HALF_BSV_SATS, escrowSats: HALF_BSV_SATS, parentId: c.id });
+    }
+    renderSession();
+  }
+  app.querySelectorAll('[data-consult-complete]').forEach(b => b.addEventListener('click', async () => { b.disabled = true; await resolveConsultation(Number(b.dataset.consultComplete), false); }));
+  app.querySelectorAll('[data-consult-refer]').forEach(b => b.addEventListener('click', async () => { b.disabled = true; await resolveConsultation(Number(b.dataset.consultRefer), true); }));
   const on = (id, fn) => document.getElementById(id)?.addEventListener('click', fn);
   on('v-start', () => { visit = { D: deriveKey() }; renderSession(); });
   on('v-reset', () => { visit = null; renderSession(); });
