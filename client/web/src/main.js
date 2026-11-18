@@ -400,8 +400,7 @@ function contractsPanel() {
         ${contracts.length
           ? `<ol class="contract-list">${[...open, ...done].map(card).join('')}</ol>`
           : `<p class="empty">No contracts yet. Each service a patient requests shows up here for providers to fulfil.</p>`}
-        <button type="button" class="btn-ghost" id="add-peers">Add 4 requests from other peers</button>
-        <p class="disclaimer">All BSV amounts are simulated allocations only. No coins are locked, transferred, or broadcast.</p>
+
       </section>`;
 }
 
