@@ -222,7 +222,7 @@ function rolesPanel() {
   const concerns = contracts.filter(c => c.initial);
   return `
     <section class="concerns" aria-label="Patient concerns">
-      <div class="concerns-head"><h1>Active concerns</h1><div><button type="button" class="btn-back" id="export-healthblocks">Export hblk00000.dat</button> <button type="button" class="btn-back" id="new-concern">+ New concern</button></div></div>
+      <div class="concerns-head"><h1>Active concerns</h1><div><button type="button" class="btn-back" id="export-healthblocks">Export hblk00000.txt</button> <button type="button" class="btn-back" id="new-concern">+ New concern</button></div></div>
       ${concerns.length ? concerns.map(c => `
         <article class="concern-card">
           <div class="concern-body">
