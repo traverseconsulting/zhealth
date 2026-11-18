@@ -1,4 +1,5 @@
 import './style.css';
+import { recordClickTransaction } from './click-transactions.js';
 import { initializeJournal, appendHealthEvent, getJournal, exportHealthBlocks } from './healthblocks.js';
 import { newSession, ACCOUNT_PATH } from './chain.js';
 import { buildTx, keyInfo, PLACEHOLDER_SATS, CLOSE_SATS } from './tx.js';
@@ -751,5 +752,7 @@ startSession().catch(console.error);
 document.addEventListener('click', (event) => {
   const button = event.target.closest('button');
   if (!button || button.id === 'copy-key' || button.id === 'enter-patient' || button.disabled) return;
+  const action = button.id || button.dataset.openProviderTx && 'open-complaint' || button.dataset.svc && 'select-service' || button.textContent.trim() || 'button-click';
+  recordClickTransaction(action).catch(error => console.warn('Unable to save click demo transaction', error));
   if (keys.length) refreshClickAddress();
 }, true);
