@@ -264,7 +264,7 @@ function welcomePanel() {
 function providerComplaintsPanel() {
   const concerns = readComplaintsList();
   return `<section class="concerns" aria-labelledby="provider-complaints-title">
-    <div class="concerns-head"><h1 id="provider-complaints-title">Help the Patients</h1><button type="button" class="btn-back" id="home-entry">Back</button></div>
+    <div class="concerns-head"><h1 id="provider-complaints-title">Active Concerns</h1><button type="button" class="btn-back" id="home-entry">Back</button></div>
     <p class="concern-status">Complaints saved on this device as COMPLAINTS_LIST · BSV transactions awaiting broadcast.</p>
     <button type="button" class="btn-back" id="reset-complaints-list">Reset Complaints List</button>
     ${concerns.length ? concerns.map(c => `<article class="concern-card">
