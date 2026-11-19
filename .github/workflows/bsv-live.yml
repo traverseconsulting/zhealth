@@ -1,0 +1,21 @@
+name: bsv-live-integration
+on:
+  push:
+    paths:
+      - 'integrations/**'
+      - 'test/bsv-live.test.mjs'
+      - '.github/workflows/bsv-live.yml'
+  pull_request:
+    paths:
+      - 'integrations/**'
+      - 'test/bsv-live.test.mjs'
+      - '.github/workflows/bsv-live.yml'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test test/bsv-live.test.mjs
