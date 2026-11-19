@@ -1,0 +1,48 @@
+name: zHealth preview (GitHub Pages)
+
+on:
+  push:
+    branches:
+      - security/phase1-protocol-hardening
+    paths:
+      - 'client/web/**'
+      - '.github/workflows/zhealth-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: zhealth-preview
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: client/web/package-lock.json
+      - name: Install
+        working-directory: client/web
+        run: npm ci --no-audit --no-fund
+      - name: Test
+        working-directory: client/web
+        run: npm test
+      - name: Build
+        working-directory: client/web
+        run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: client/web/dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

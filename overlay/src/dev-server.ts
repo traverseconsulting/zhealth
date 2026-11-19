@@ -31,9 +31,15 @@ const node = await createZHealthNode({
   onReject: (txid, i, reason) => console.log(`rejected ${txid}.${i}: ${reason}`)
 })
 
+const MAX_BODY_BYTES = 1024 * 1024 // Development endpoint limit; production needs independent limits.
 const body = async (req: http.IncomingMessage): Promise<Buffer> => {
   const parts: Buffer[] = []
-  for await (const c of req) parts.push(c as Buffer)
+  let total = 0
+  for await (const c of req) {
+    total += (c as Buffer).length
+    if (total > MAX_BODY_BYTES) throw new Error('request body too large')
+    parts.push(c as Buffer)
+  }
   return Buffer.concat(parts)
 }
 const send = (res: http.ServerResponse, code: number, v: unknown): void => {
@@ -62,7 +68,7 @@ http.createServer((req, res) => {
       if (req.method === 'GET' && req.url === '/health') return send(res, 200, { ok: true })
       send(res, 404, { error: 'not found' })
     } catch (e) {
-      send(res, 400, { error: e instanceof Error ? e.message : String(e) })
+      send(res, e instanceof Error && e.message === 'request body too large' ? 413 : 400, { error: e instanceof Error ? e.message : String(e) })
     }
   })()
 }).listen(Number(process.env.PORT ?? 8080), () => console.log(`zHealth overlay node on :${process.env.PORT ?? 8080} (chain=${chain}, db=${db})`))

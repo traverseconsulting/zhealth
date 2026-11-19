@@ -1,0 +1,477 @@
+{
+  "schema": "zhealth.public-machine-registry.v1",
+  "visibility": "public",
+  "registrar": {
+    "addressDisplay": "1GhhAVa4…Nxv1Bm",
+    "addressVerified": false
+  },
+  "claimedTotals": {
+    "registeredDevices": 29,
+    "coveredServices": 33,
+    "totalServices": 34
+  },
+  "notes": [
+    "Entries transcribed from supplied registry; registration transaction IDs and device ownership have not been independently verified on BSV.",
+    "Public keys and service identifiers are public; no device private keys are stored."
+  ],
+  "devices": [
+    {
+      "category": "Vital signs",
+      "name": "Thermometer",
+      "serial": "TH-7124",
+      "status": "registered",
+      "publicKey": "03b5a5dc7ed8e5a0ad9cb43288cac2450d3ac0a7921fcfc2c661066a7738b2e64c",
+      "services": [
+        {
+          "name": "Take temperature",
+          "serviceId": "82525e2d289bf4de"
+        }
+      ],
+      "registrationTxid": "4c4cf2534c217d94bc7b028b49426cb0bac110843671bdde0eb4d95a18930201"
+    },
+    {
+      "category": "Vital signs",
+      "name": "Thermometer",
+      "serial": "TH-8007",
+      "status": "registered",
+      "publicKey": "02c1818718a7df9703c9f24fe5b0bec8bb85d0853c02d34e2d25de360b7a0478a2",
+      "services": [
+        {
+          "name": "Take temperature",
+          "serviceId": "82525e2d289bf4de"
+        }
+      ],
+      "registrationTxid": "a5b5bb3daf96248ae0e8e802433a8840fa975e65eb62a1e63bd48144bba202f8"
+    },
+    {
+      "category": "Vital signs",
+      "name": "Vital signs monitor",
+      "serial": "VS-6784",
+      "status": "registered",
+      "publicKey": "0381e44e4d445847c009de768bc39846c7a8857825479a9e521a2116e345a9f91c",
+      "services": [
+        {
+          "name": "Take vitals",
+          "serviceId": "be4fb7bf81d99428"
+        },
+        {
+          "name": "Take temperature",
+          "serviceId": "82525e2d289bf4de"
+        },
+        {
+          "name": "Take blood pressure",
+          "serviceId": "64f9db375a4ed7a6"
+        },
+        {
+          "name": "Check pulse",
+          "serviceId": "310a1437c9495cd5"
+        },
+        {
+          "name": "Check oxygen level",
+          "serviceId": "d4f11836d7a388f9"
+        },
+        {
+          "name": "Count breathing rate",
+          "serviceId": "a84f8b0757a8f7fc"
+        }
+      ],
+      "registrationTxid": "baaddf152fe8d23997afe659aa6c4a9c5392da8bfeffb2c1aeef65d1a8b61a2f"
+    },
+    {
+      "category": "Vital signs",
+      "name": "Blood pressure monitor",
+      "serial": "BP-1008",
+      "status": "registered",
+      "publicKey": "033ad0a4e8ecde737cc797acbfb350cd66468d94072926de7d9e3ddf86f97b8c16",
+      "services": [
+        {
+          "name": "Take blood pressure",
+          "serviceId": "64f9db375a4ed7a6"
+        },
+        {
+          "name": "Check pulse",
+          "serviceId": "310a1437c9495cd5"
+        }
+      ],
+      "registrationTxid": "a41ef65fe85e8505f450951c5e3326d80bc688be41009174bb79fda675cc1cb0"
+    },
+    {
+      "category": "Vital signs",
+      "name": "Blood pressure monitor",
+      "serial": "BP-9264",
+      "status": "registered",
+      "publicKey": "0259d418eaca0ce3cfeda451ed383ec020e9abd9fd831e15d838dbf8c913e19d6c",
+      "services": [
+        {
+          "name": "Take blood pressure",
+          "serviceId": "64f9db375a4ed7a6"
+        },
+        {
+          "name": "Check pulse",
+          "serviceId": "310a1437c9495cd5"
+        }
+      ],
+      "registrationTxid": "d587331db16adf30ea389ec91d38024c88b344df411749b4740d74a971531f1c"
+    },
+    {
+      "category": "Vital signs",
+      "name": "Pulse oximeter",
+      "serial": "OX-1210",
+      "status": "registered",
+      "publicKey": "02e300be51309e1d6ff74adf110e5e5d601bf7edca8f77f2ea3456eb4860220ac6",
+      "services": [
+        {
+          "name": "Check oxygen level",
+          "serviceId": "d4f11836d7a388f9"
+        },
+        {
+          "name": "Check pulse",
+          "serviceId": "310a1437c9495cd5"
+        }
+      ],
+      "registrationTxid": "8212af0006a6bed85610d5e7bc1776eadf5e0c1887d2c14b59759497799115e1"
+    },
+    {
+      "category": "Vital signs",
+      "name": "Respiratory monitor",
+      "serial": "RM-8661",
+      "status": "registered",
+      "publicKey": "025e3861be8eadc45756efc0d1c100b3f8b989c0cade548b564a247ffc39b1875a",
+      "services": [
+        {
+          "name": "Count breathing rate",
+          "serviceId": "a84f8b0757a8f7fc"
+        }
+      ],
+      "registrationTxid": "f82f5a0346175999a30bff42c689c355ff2f91a4aadc8f54a4c19899cac8b9b8"
+    },
+    {
+      "category": "Vital signs",
+      "name": "Scale",
+      "serial": "SC-6893",
+      "status": "registered",
+      "publicKey": "02c8d1e03e9106acd971e2d420ab54eb6db91e0c66ddb0c2c90b4202728af888c4",
+      "services": [
+        {
+          "name": "Measure weight",
+          "serviceId": "3adf75f5ba37a03a"
+        }
+      ],
+      "registrationTxid": "7102ad364abdc98813a66a8755f73901d7d0637a32a02f7271352687da6eae28"
+    },
+    {
+      "category": "Vital signs",
+      "name": "Pain assessment tablet",
+      "serial": "PA-7541",
+      "status": "registered",
+      "publicKey": "03242d25dddb5aa303ca66b821dd9767cc369b6e601e1bfa5a54bea6aa3d701bd7",
+      "services": [
+        {
+          "name": "Assess pain",
+          "serviceId": "75474e2b034975d4"
+        }
+      ],
+      "registrationTxid": "14eea85d4045b750b50c3dc527ed2d98ab27f242319f9ca9cb1977dfe1098929"
+    },
+    {
+      "category": "Tests and samples",
+      "name": "Glucometer",
+      "serial": "GL-2771",
+      "status": "registered",
+      "publicKey": "03540d1ffa0276536da3a99c267a7432cef60ca9a87b76592a1c8c2332798abc0c",
+      "services": [
+        {
+          "name": "Check blood sugar",
+          "serviceId": "a04cdbad82625cc4"
+        }
+      ],
+      "registrationTxid": "fc092b53f94896b64d9f6f1b1d4455650c20ec2602196d33873aef0d90a59794"
+    },
+    {
+      "category": "Tests and samples",
+      "name": "Specimen labeler",
+      "serial": "SL-7177",
+      "status": "registered",
+      "publicKey": "03a09b04240a80301baa6abbfcc81fe4d52fc6789a1ca0d6fc33c7cd14fa0b2e53",
+      "services": [
+        {
+          "name": "Draw blood",
+          "serviceId": "2ba7a59d8b54dfa0"
+        },
+        {
+          "name": "Collect urine sample",
+          "serviceId": "2b7b85d40dd3d694"
+        },
+        {
+          "name": "Take a swab",
+          "serviceId": "551354304b712063"
+        },
+        {
+          "name": "Pap test",
+          "serviceId": "76f2bd2985cd0ca9"
+        }
+      ],
+      "registrationTxid": "b74cdadf7d8ec7f233436a8a4881c0a3da112759e52ef408476d7e1e911dd7fe"
+    },
+    {
+      "category": "Tests and samples",
+      "name": "ECG machine",
+      "serial": "EC-4307",
+      "status": "registered",
+      "publicKey": "023d830c50787cbd46a0dcef1382e1f594993b50b8095a4352497f270d3ee8f35c",
+      "services": [
+        {
+          "name": "Run ECG",
+          "serviceId": "26e5422e74f17f6a"
+        }
+      ],
+      "registrationTxid": "921c11d0e4c4ac29221515af97589340f317c115cbd811a9cf874c245d1093a0"
+    },
+    {
+      "category": "Lab tests",
+      "name": "Hematology analyzer",
+      "serial": "HA-3008",
+      "status": "registered",
+      "publicKey": "03030b6683fcc33b2327ca1b8f3c86e43829fb9975593fcff40fa1ac8a36b59900",
+      "services": [
+        {
+          "name": "Complete blood count",
+          "serviceId": "67f7df258c1ad514"
+        }
+      ],
+      "registrationTxid": "0d1af69e91802dbaaff5514ccca7816f743c535294cc6b798f5ce524c543238c"
+    },
+    {
+      "category": "Lab tests",
+      "name": "Chemistry analyzer",
+      "serial": "CA-1721",
+      "status": "registered",
+      "publicKey": "03849b331dd3839531613f6dc7157279db7769d78a01070a627c397e201093beba",
+      "services": [
+        {
+          "name": "Metabolic panel",
+          "serviceId": "e85bf9d4cd1430d0"
+        },
+        {
+          "name": "Cholesterol panel",
+          "serviceId": "347a076f3ce3b18b"
+        }
+      ],
+      "registrationTxid": "f5031283e741621f6b61dd8dbd397bc6659e21d2066ab08678c968f29fb6e18f"
+    },
+    {
+      "category": "Lab tests",
+      "name": "HbA1c analyzer",
+      "serial": "A1-8750",
+      "status": "registered",
+      "publicKey": "03ca1d2e27fb1a29b9a2a8f5a7ac857eb9d65b5b1dab6328463b33f19e69da86f2",
+      "services": [
+        {
+          "name": "HbA1c",
+          "serviceId": "840b5c0faabde071"
+        }
+      ],
+      "registrationTxid": "002fd002828bfdf94f9c3a95fb7478184489f7162158f7a8be8d294a4cc9ee52"
+    },
+    {
+      "category": "Lab tests",
+      "name": "Immunoassay analyzer",
+      "serial": "IA-5378",
+      "status": "registered",
+      "publicKey": "035aca3bc61fb1b54b0ae23ff93ffc1a94395d65f64eba8c30da1630c465103790",
+      "services": [
+        {
+          "name": "Thyroid test",
+          "serviceId": "42e0529dfe6227f8"
+        }
+      ],
+      "registrationTxid": "91eb0e911b032154ab7963e74e9671545ef93c80199f83014a3b859a72ee58d0"
+    },
+    {
+      "category": "Lab tests",
+      "name": "Urine analyzer",
+      "serial": "UA-8228",
+      "status": "registered",
+      "publicKey": "03a6fabbaf047e4ff5aa1e6824ea778b0f9f89073ea4c7662bdb51615d708c164a",
+      "services": [
+        {
+          "name": "Urinalysis",
+          "serviceId": "71665e9cf55bf98c"
+        }
+      ],
+      "registrationTxid": "09c4097953f365b5325fd9f10942cf6683df0a150f0ac3db946bd25b7b6ad1f2"
+    },
+    {
+      "category": "Imaging",
+      "name": "Digital X-ray system",
+      "serial": "XR-4734",
+      "status": "registered",
+      "publicKey": "027bc2be96a2f7826c7aac890bee2aa6d6eacd8ca539cd1181aa0e7a1f5445f242",
+      "services": [
+        {
+          "name": "Take X-ray",
+          "serviceId": "a1bfed829d53cafc"
+        }
+      ],
+      "registrationTxid": "3b4193816f73192177b48f0f6536682b1320975b7c975406ea5130ad6082904a"
+    },
+    {
+      "category": "Imaging",
+      "name": "Ultrasound scanner",
+      "serial": "US-4838",
+      "status": "registered",
+      "publicKey": "030163d6526175e691d681dea1af5b5f442bbeebb8455507f0dfa4d5b3a535a6be",
+      "services": [
+        {
+          "name": "Do ultrasound",
+          "serviceId": "ea4ca527f042f0eb"
+        }
+      ],
+      "registrationTxid": "a10798011caf4954a11f505a428f6f021be90b3f15cdab1470ea4684fdd6b652"
+    },
+    {
+      "category": "Imaging",
+      "name": "Mammography unit",
+      "serial": "MG-4121",
+      "status": "registered",
+      "publicKey": "02f1e428127622067949098567c9f9d4a24369ae76424bea8d658639aae50c7a3b",
+      "services": [
+        {
+          "name": "Mammogram",
+          "serviceId": "d78197e1de494aa0"
+        }
+      ],
+      "registrationTxid": "02d7b76fce0cd999aabfae1f1b3afab9b9f6b7ce905b7bde79f56bc69f44834a"
+    },
+    {
+      "category": "Screenings",
+      "name": "Digital stethoscope",
+      "serial": "DS-5954",
+      "status": "registered",
+      "publicKey": "03511c91ef28b1ef3876e503a94542544d6ddfd42295e27c414025f56e602d0188",
+      "services": [
+        {
+          "name": "Physical exam",
+          "serviceId": "2b194811c27c745e"
+        }
+      ],
+      "registrationTxid": "5d7d2c55fdbbc74e3cd19e01efbef8bd273db7bd86c64d6116471d012c47cfc1"
+    },
+    {
+      "category": "Screenings",
+      "name": "Vision screener",
+      "serial": "VI-5680",
+      "status": "registered",
+      "publicKey": "0350e5dd2238af3de064f04bfd5edd974113350455c3382e697757439155da8a78",
+      "services": [
+        {
+          "name": "Eye exam",
+          "serviceId": "2aa95e821008884f"
+        }
+      ],
+      "registrationTxid": "cef9b0a44d654c018626859e941f082b9aaf53c88676ba1dc53dc1a00810acec"
+    },
+    {
+      "category": "Screenings",
+      "name": "Audiometer",
+      "serial": "AU-6291",
+      "status": "registered",
+      "publicKey": "027fcd28fcfb12f8eae10cf8343f9615291bac4c71680b808059d2c703eb24b252",
+      "services": [
+        {
+          "name": "Hearing test",
+          "serviceId": "af98e3142ab1897d"
+        }
+      ],
+      "registrationTxid": "5fd1f69272c515f585be586456a9b11a010a3eca4a3173f61727ac83141fd22d"
+    },
+    {
+      "category": "Screenings",
+      "name": "Screening tablet",
+      "serial": "ST-5365",
+      "status": "registered",
+      "publicKey": "02830b6319bc39dd2b6d4753b41255cb82b1f4221a4c632c58b1f1eed59caeb842",
+      "services": [
+        {
+          "name": "Depression screening",
+          "serviceId": "98ec35a19525cf7a"
+        }
+      ],
+      "registrationTxid": "43fff1dfc7a744dfd5241987829c93f515c2063fdf62db0a2add719173978ab9"
+    },
+    {
+      "category": "Screenings",
+      "name": "Dermatoscope",
+      "serial": "DM-9665",
+      "status": "registered",
+      "publicKey": "03cfbb47fd4015c7cfe9e4459ef32730027700870934860069ba5eb10e613c149f",
+      "services": [
+        {
+          "name": "Skin check",
+          "serviceId": "aa76b240292b8c8f"
+        }
+      ],
+      "registrationTxid": "a423d9153892219577dfe4b5dbab14cb5dbfae3ff2a976e86401ca7e42379481"
+    },
+    {
+      "category": "Screenings",
+      "name": "FIT analyzer",
+      "serial": "FI-7390",
+      "status": "registered",
+      "publicKey": "03b819774b0eeac0671c5cd810fe09bf011cf8d27db14451a4c0ebbf56c02a53c7",
+      "services": [
+        {
+          "name": "Colorectal screening",
+          "serviceId": "896e36706f419d1e"
+        }
+      ],
+      "registrationTxid": "b2988a4bbd521d57b31a85d4be609208d0144de52a480a45a7d7dd652bf78fea"
+    },
+    {
+      "category": "Treatment",
+      "name": "Medication scanner",
+      "serial": "MS-2460",
+      "status": "registered",
+      "publicKey": "023e7b41bc9b6e0318644021ca1b14024b080b1674fd5ec3ceb1e92f5e8d6a6485",
+      "services": [
+        {
+          "name": "Give medication",
+          "serviceId": "8a3458ea4f537a6c"
+        },
+        {
+          "name": "Give vaccine",
+          "serviceId": "1830111ac4d47e9c"
+        }
+      ],
+      "registrationTxid": "0688264ce484abc05935ffe01f509f25df9a9892600401885ae68567705b2878"
+    },
+    {
+      "category": "Treatment",
+      "name": "Wound camera",
+      "serial": "WC-8818",
+      "status": "registered",
+      "publicKey": "02a9a6f5b6bd2f28140bf76f6cd4daec5fef2d24e79df4aba7f888da75c64f7a25",
+      "services": [
+        {
+          "name": "Dress wound",
+          "serviceId": "b2df96d53044226a"
+        }
+      ],
+      "registrationTxid": "abf674be0f9bd6544e5809ad95483fa3c8ad3b30fb3fd4bfbb479d48e81bcfe8"
+    },
+    {
+      "category": "Treatment",
+      "name": "Infusion pump",
+      "serial": "IP-7287",
+      "status": "registered",
+      "publicKey": "021bdc7f3e3845e9253c5f9c9e7a29f032ae1e1ccb8e1f34a37983f3a75054b6b5",
+      "services": [
+        {
+          "name": "Start IV",
+          "serviceId": "bb60d5a0a0b162bc"
+        }
+      ],
+      "registrationTxid": "c0d52e4a946e156c0c65336929063a2304fd1da17d0b009430f15ef6aa9259c0"
+    }
+  ]
+}
