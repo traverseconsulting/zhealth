@@ -412,28 +412,6 @@ function visitPanel() {
       </section>`;
 }
 
-function devicesPanel() {
-  if (!registry) return '';
-  return `
-      <details class="devices">
-        <summary><span class="devices-h">Trusted devices</span><span class="count">${registry.devices.length} registered</span><span class="count">${new Set(registry.devices.flatMap((d) => d.services)).size} of ${Object.values(SERVICES).reduce((n, g) => n + g.items.length, 0)} services covered</span></summary>
-        <p class="visit-lede">Each device has its own key pair. The network registrar <span class="mono">${short(registry.registrar.address, 8, 6)}</span> published one registration transaction per device, binding its public key to the public service IDs it may measure.</p>
-        ${[...new Set(registry.devices.map((d) => d.group))].map((g) => `
-        <h3 class="device-group">${g} <span class="muted">${registry.devices.filter((d) => d.group === g).length}</span></h3>
-        <ul class="device-list">
-          ${registry.devices.filter((d) => d.group === g).map((d) => `
-          <li class="device">
-            <div class="device-top"><strong>${esc(d.model)}</strong><span class="mono muted">${d.serial}</span>${d.reg.verified ? '<span class="pill pill-ok">Registered</span>' : ''}</div>
-            <dl class="kv">
-              <div><dt>Device public key</dt><dd class="mono wrap">${d.key.pubHex}</dd></div>
-              <div><dt>Services</dt><dd>${d.services.map((sl, i) => `${esc(findService(sl).label)} <span class="mono svc-id">${d.svcIds[i]}</span>`).join(' · ')}</dd></div>
-              <div><dt>Registration tx</dt><dd class="mono wrap">${d.reg.txid}</dd></div>
-            </dl>
-          </li>`).join('')}
-        </ul>`).join('')}
-      </details>`;
-}
-
 function contractsPanel() {
   const open = contracts.filter((c) => c.status === 'open');
   const done = contracts.filter((c) => c.status === 'fulfilled');
@@ -503,7 +481,6 @@ function providerPanel() {
         ${currentComplaint.status === 'fulfilled' ? `<p>Completed · ${allocation?.additionalService === 'refund' ? '50 sats refund prepared for patient' : `50 sats reserved for ${esc(allocation?.additionalService || 'additional care')}`}</p>` : ''}
         <p class="concern-status">Local BSV-format demonstration only. No real satoshis are funded, locked, or transferred.</p>
       </section>` : ''}
-      ${devicesPanel()}
       ${contractsPanel()}
     </section>`;
 }
