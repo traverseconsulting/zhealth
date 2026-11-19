@@ -261,21 +261,6 @@ function welcomePanel() {
   </section>`;
 }
 
-function providerComplaintsPanel() {
-  const concerns = readComplaintsList();
-  return `<section class="concerns" aria-labelledby="provider-complaints-title">
-    <div class="concerns-head"><h1 id="provider-complaints-title">Active Concerns</h1><button type="button" class="btn-back" id="home-entry">Back</button></div>
-    <p class="concern-status">Complaints saved on this device as COMPLAINTS_LIST · BSV transactions awaiting broadcast.</p>
-    <button type="button" class="btn-back" id="reset-complaints-list">Reset Complaints List</button>
-    ${concerns.length ? concerns.map(c => `<article class="concern-card">
-      <div class="concern-body"><p class="concern-text">${esc(c.complaint)}</p>
-      <span class="concern-status">${c.status === 'open' ? 'Open · Awaiting provider' : c.status === 'consulted' ? 'Consulted · Additional care decision pending' : c.status === 'additional-care-reserved' ? 'Additional care reserved' : 'Consultation completed'}</span>
-      <span class="concern-status mono">Tx ${short(c.txid, 10, 8)}</span><span class="concern-status">100 sats · 50 consultation / 50 additional care or refund</span></div>
-      <div class="concern-actions"><button type="button" class="btn-role" data-open-provider-tx="${c.txid}">Open complaint · 100 sats</button></div>
-    </article>`).join('') : '<p class="empty">No active concerns found in this browser session.</p>'}
-  </section>`;
-}
-
 function intakePanel() {
   return `<section class="intake" aria-labelledby="intake-title">
     <h1 id="intake-title">What brings you in today?</h1>
@@ -459,9 +444,17 @@ function contractsPanel() {
 function providerPanel() {
   const currentComplaint = contractById(selectedConcernId);
   const allocation = currentComplaint?.allocation;
+  const availableComplaints = readComplaintsList();
   return `
     <section class="provider" aria-labelledby="prov-h">
       <div class="recip-head">${backBtn}<h1 id="prov-h" class="prov-title">Provider</h1></div>
+      ${!currentComplaint?.initial && availableComplaints.length ? `<section class="contracts" aria-label="Available patient complaints">
+        <h2>Available patient complaints</h2>
+        ${availableComplaints.map(item => `<article class="concern-card">
+          <p class="concern-text">${esc(item.complaint)}</p>
+          <button type="button" class="btn-role" data-open-provider-tx="${item.txid}">Open complaint · 100 sats</button>
+        </article>`).join('')}
+      </section>` : ''}
       ${currentComplaint?.initial ? `<section class="contracts">
         <h2>Patient complaint · 100 sats</h2>
         <p>${esc(currentComplaint.complaint)}</p>
@@ -513,7 +506,7 @@ function renderSession() {
     <button type="button" class="btn-back" id="download-transactions">Download Transactions</button>
   </header>
   <main class="session">
-    ${view === 'welcome' ? welcomePanel() : view === 'provider-list' ? providerComplaintsPanel() : view === 'intake' ? intakePanel() : view === 'registration' ? registrationPanel() : view === 'recipient' ? recipientPanel() : view === 'provider' ? providerPanel() : rolesPanel()}
+    ${view === 'welcome' ? welcomePanel() : view === 'intake' ? intakePanel() : view === 'registration' ? registrationPanel() : view === 'recipient' ? recipientPanel() : view === 'provider' ? providerPanel() : rolesPanel()}
   </main>`;
 
   document.getElementById('download-transactions')?.addEventListener('click', async (event) => {
@@ -539,14 +532,7 @@ function renderSession() {
       alert('Unable to create Patient transaction: ' + error.message);
     }
   });
-  document.getElementById('enter-provider')?.addEventListener('click', () => { view = 'provider-list'; renderSession(); });
-  document.getElementById('reset-complaints-list')?.addEventListener('click', () => {
-    if (!window.confirm('Delete all complaints saved in COMPLAINTS_LIST on this browser? This cannot be undone.')) return;
-    localStorage.removeItem(COMPLAINTS_LIST);
-    contracts = contracts.filter(item => !item.initial);
-    selectedConcernId = null;
-    renderSession();
-  });
+  document.getElementById('enter-provider')?.addEventListener('click', () => { view = 'provider'; selectedConcernId = null; renderSession(); });
   document.getElementById('home-entry')?.addEventListener('click', () => { view = 'welcome'; renderSession(); });
   app.querySelectorAll('[data-open-provider-tx]').forEach(b => b.addEventListener('click', () => {
     const saved = readComplaintsList().find(item => item.txid === b.dataset.openProviderTx);
